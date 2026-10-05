@@ -270,7 +270,72 @@ function closeReminder() {
   reminderModal.hidden = true;
 }
 
+/**
+ * 「今日やること」パネル。新しいデータは使わず、すでに取得している「未入力の確認」の結果から作ります。
+ * 日次の未入力は古い順に最大3件、月次の未入力は全件を表示し、残りは件数だけ出します。
+ */
+const TASK_DAILY_LIMIT = 3;
+
+function renderTasks(data) {
+  const list = document.querySelector("#task-list");
+  const chip = document.querySelector("#task-chip");
+  if (!list || !chip) return;
+  const daily = data.dailyMissingDates || [];
+  const monthly = data.monthlyMissing || [];
+  const total = daily.length + monthly.length;
+  list.replaceChildren();
+
+  if (!total) {
+    chip.textContent = "完了";
+    const done = document.createElement("div");
+    done.className = "task-done";
+    done.innerHTML = "<span aria-hidden=\"true\">✅</span><span>未入力の業務はありません。</span>";
+    list.append(done);
+    return;
+  }
+
+  chip.textContent = `${total}件`;
+  const addLink = (label, hint, href) => {
+    const a = document.createElement("a");
+    a.className = "task-link";
+    a.href = href;
+    const text = document.createElement("span");
+    text.textContent = label;
+    const small = document.createElement("small");
+    small.textContent = hint;
+    a.append(text, small);
+    list.append(a);
+  };
+
+  if (daily.length) {
+    const title = document.createElement("p");
+    title.className = "task-group-title";
+    title.textContent = `日次業務の未入力 ${daily.length}日`;
+    list.append(title);
+    daily.slice(0, TASK_DAILY_LIMIT).forEach((dateStr) => {
+      const [y, m, d] = String(dateStr).split("-").map(Number);
+      const weekday = "日月火水木金土"[new Date(y, m - 1, d).getDay()];
+      addLink(`${m}月${d}日(${weekday})`, "入力する ›", `index.html?date=${encodeURIComponent(dateStr)}`);
+    });
+    if (daily.length > TASK_DAILY_LIMIT) {
+      const more = document.createElement("p");
+      more.className = "task-more";
+      more.textContent = `ほか${daily.length - TASK_DAILY_LIMIT}日`;
+      list.append(more);
+    }
+  }
+
+  if (monthly.length) {
+    const title = document.createElement("p");
+    title.className = "task-group-title";
+    title.textContent = `${data.previousMonthLabel || "前月"}の月次入力 ${monthly.length}件`;
+    list.append(title);
+    monthly.forEach((item) => addLink(item.label, "入力する ›", item.href));
+  }
+}
+
 function renderReminderStatus(data) {
+  renderTasks(data);
   if (localStorage.getItem(REMINDER_SNOOZE_KEY) === localDateKey()) return;
 
   const missing = [];
@@ -310,6 +375,10 @@ async function loadReminderStatus(forceRefresh) {
     renderReminderStatus(data);
   } catch (error) {
     console.error("Reminder status error:", error);
+    const chip = document.querySelector("#task-chip");
+    const list = document.querySelector("#task-list");
+    if (chip) chip.textContent = "取得失敗";
+    if (list) list.textContent = "未入力の確認を取得できませんでした。↻で再読み込みしてください。";
   }
 }
 

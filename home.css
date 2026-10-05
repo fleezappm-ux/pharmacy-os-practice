@@ -19,3 +19,5 @@
 .hero-mark{opacity:.34;filter:saturate(1.08) contrast(1.04)}
 .side-brand img,.mobile-brand img{filter:saturate(1.22) contrast(1.1)}
 @media(max-width:760px){.hero-mark{opacity:.35}}
+
+.task-list{display:grid;gap:8px}.task-group-title{margin:6px 0 0;color:var(--muted);font-size:.68rem;font-weight:800}.task-link{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;color:var(--primary);font-size:.76rem;font-weight:800;background:#e8f7f2;border:1px solid #cfeae2;border-radius:12px}.task-link small{color:#526870;font-weight:700}.task-more{margin:0;color:var(--muted);font-size:.68rem;text-align:right}.task-done{display:flex;align-items:center;gap:10px;padding:14px;background:#f7faf9;border:1px dashed #d3e1de;border-radius:13px;font-size:.78rem;font-weight:800}

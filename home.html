@@ -9,11 +9,11 @@
   <link rel="manifest" href="manifest.webmanifest?v=2">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/aoi-icon-32-v2.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v2.png">
-  <link rel="stylesheet" href="home.css?v=11">
+  <link rel="stylesheet" href="home.css?v=12">
   <script src="config.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="auth.js?v=6"></script>
-  <script src="home.js?v=13" defer></script>
+  <script src="home.js?v=14" defer></script>
 </head>
 <body>
   <div id="auth-gate" class="auth-gate" hidden>
@@ -91,7 +91,7 @@
           </div>
 
           <aside class="dashboard-aside">
-            <section class="panel task-panel" aria-labelledby="tasks-heading"><div class="section-heading"><div><p class="section-kicker">TASKS</p><h2 id="tasks-heading">今日やること</h2></div><span class="status-chip">準備中</span></div><div class="task-placeholder"><span class="task-icon">✓</span><div><strong>期限の近い業務</strong><p>タスクDB連携後に自動表示します。</p></div></div></section>
+            <section class="panel task-panel" aria-labelledby="tasks-heading"><div class="section-heading"><div><p class="section-kicker">TASKS</p><h2 id="tasks-heading">今日やること</h2></div><span id="task-chip" class="status-chip">確認中</span></div><div id="task-list" class="task-list" aria-live="polite"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></section>
                         <section class="pharmacy-card" aria-label="薬局情報"><p class="section-kicker">AOI PHARMACY</p><h2>あおい薬局</h2><p>長野県松本市里山辺12090-2</p><div><a href="tel:0263875203">TEL 0263-87-5203</a><span>FAX 0263-87-5204</span></div></section>
           </aside>
         </div>
