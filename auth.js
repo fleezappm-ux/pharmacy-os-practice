@@ -473,7 +473,9 @@ function renderPerf() {
   const errText = errors.length
     ? "\n--- エラー記録 " + errors.length + "件（新しい順に最大5件） ---\n" + errors.slice(-5).reverse().map((x) => x.t.slice(5, 16).replace("T", " ") + " " + x.page + " " + x.kind + (x.detail ? "：" + x.detail : "")).join("\n")
     : "\nエラー記録なし";
-  box.textContent = head + perfLog.join("\n") + errText;
+  const sess = getSession();
+  const sessText = sess ? "入館証あり（残り" + Math.round((sess.exp - Date.now() / 1000) / 3600) + "時間）\n" : "入館証なし\n";
+  box.textContent = head + sessText + perfLog.join("\n") + errText;
 }
 window.addEventListener("load", () => setTimeout(renderPerf, 0));
 
