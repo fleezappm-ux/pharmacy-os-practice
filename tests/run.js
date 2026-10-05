@@ -150,13 +150,33 @@ test("通信が失敗したらエラー記録に残り、例外はそのまま�
   assert(thrown, "例外が握りつぶされた");
   assert(w.__t.readClientErrors().some((e) => e.kind.includes("通信失敗") && e.detail.includes("network down")), "記録がない");
 });
+test("GASがHTMLのエラー画面を返したら、1回だけやり直して成功すれば普通に結果を返す", async () => {
+  const w = loadAuth();
+  let calls = 0;
+  w.fetch = () => { calls++; return Promise.resolve(calls === 1
+    ? { status: 200, text: () => Promise.resolve("<!DOCTYPE html><html><body>Service unavailable</body></html>") }
+    : { status: 200, text: () => Promise.resolve(JSON.stringify({ success: true, v: 7 })) }); };
+  const r = await w.__t.authFetch("home");
+  assert(calls === 2 && r.v === 7, "calls=" + calls);
+  assert(w.__t.readClientErrors().some((e) => e.kind.includes("HTMLを返したため再試行")), "再試行の記録がない");
+});
+test("GASがHTMLを2回続けて返したら、原因が分かる文で失敗し、記録も残る", async () => {
+  const w = loadAuth();
+  let calls = 0;
+  w.fetch = () => { calls++; return Promise.resolve({ status: 503, text: () => Promise.resolve("<!DOCTYPE html><html><body>Sorry, error</body></html>") }); };
+  let msg = "";
+  try { await w.__t.authFetch("home"); } catch (e) { msg = e.message; }
+  assert(calls === 2, "calls=" + calls);
+  assert(msg.includes("JSONではありません") && msg.includes("503"), msg);
+  assert(w.__t.readClientErrors().some((e) => e.kind.includes("通信失敗")), "失敗の記録がない");
+});
 test("サーバーが success:false を返したら記録される（認証エラーは除く）", async () => {
   const w = loadAuth();
-  w.fetch = () => Promise.resolve({ json: () => Promise.resolve({ success: false, message: "boom" }) });
+  w.fetch = () => Promise.resolve({ status: 200, json: () => Promise.resolve({ success: false, message: "boom" }), text: () => Promise.resolve(JSON.stringify({ success: false, message: "boom" })) });
   await w.__t.authFetch("home");
   assert(w.__t.readClientErrors().some((e) => e.detail === "boom"), "記録がない");
   const w2 = loadAuth();
-  w2.fetch = () => Promise.resolve({ json: () => Promise.resolve({ success: false, authError: true }) });
+  w2.fetch = () => Promise.resolve({ status: 200, json: () => Promise.resolve({ success: false, authError: true }), text: () => Promise.resolve(JSON.stringify({ success: false, authError: true })) });
   w2.requireAuth = () => {};
   w2.__t.authFetch("home");
   assert(w2.__t.readClientErrors().length === 0, "認証切れまで記録した");
@@ -186,7 +206,7 @@ test("入館証があれば、GASへ入館証を送りGoogleの証明は送ら�
   const w = loadAuth();
   w.__t.saveSession(sessionResult(), "a@b.c");
   let body;
-  w.fetch = (u, o) => { body = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve({ success: true }) }); };
+  w.fetch = (u, o) => { body = JSON.parse(o.body); return Promise.resolve({ status: 200, json: () => Promise.resolve({ success: true }), text: () => Promise.resolve(JSON.stringify({ success: true })) }); };
   await w.__t.authFetch("home");
   assert(body.pharmacySession === "s1.AAA.BBB" && body.idToken === undefined, JSON.stringify(body));
 });
@@ -194,7 +214,7 @@ test("入館証がなければ、従来どおりGoogleの証明を送る", async
   const w = loadAuth();
   w.sessionStorage.setItem("pharmacyOsIdToken", "GTOKEN");
   let body;
-  w.fetch = (u, o) => { body = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve({ success: true }) }); };
+  w.fetch = (u, o) => { body = JSON.parse(o.body); return Promise.resolve({ status: 200, json: () => Promise.resolve({ success: true }), text: () => Promise.resolve(JSON.stringify({ success: true })) }); };
   await w.__t.authFetch("home");
   assert(body.idToken === "GTOKEN" && body.pharmacySession === undefined, JSON.stringify(body));
 });
@@ -223,7 +243,7 @@ test("Googleでログインした直後に、入館証を取りに行って保�
   const w = loadAuth();
   const idToken = jwt({ email: "a@b.c", exp: Math.floor(Date.now() / 1000) + 3600 });
   let sent;
-  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve(sessionResult()) }); };
+  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ status: 200, json: () => Promise.resolve(sessionResult()), text: () => Promise.resolve(JSON.stringify(sessionResult())) }); };
   w.__t.handleCredentialResponse({ credential: idToken });
   await new Promise((r) => setTimeout(r, 20));
   assert(sent.action === "createSession" && sent.idToken === idToken, JSON.stringify(sent));
@@ -242,7 +262,7 @@ test("入館証が無いまま有効なGoogleログインで画面を開くと�
   const w = loadAuth();
   w.sessionStorage.setItem("pharmacyOsIdToken", jwt({ email: "a@b.c", exp: Math.floor(Date.now() / 1000) + 3600 }));
   let sent = null;
-  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve(sessionResult()) }); };
+  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ status: 200, json: () => Promise.resolve(sessionResult()), text: () => Promise.resolve(JSON.stringify(sessionResult())) }); };
   w.__t.requireAuth(() => {});
   await new Promise((r) => setTimeout(r, 20));
   assert(sent && sent.action === "createSession", "取りに行かない");
@@ -253,7 +273,7 @@ test("更新時期（残り7日）を過ぎた入館証は、入館証で更新�
   const now = Math.floor(Date.now() / 1000);
   w.localStorage.setItem("pharmacyOsSession", JSON.stringify({ token: "s1.OLD.SIG", exp: now + 3 * 86400, renewBefore: now - 4 * 86400, email: "a@b.c" }));
   let sent = null;
-  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve(sessionResult({ pharmacySession: "s1.NEW.SIG" })) }); };
+  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ status: 200, json: () => Promise.resolve(sessionResult({ pharmacySession: "s1.NEW.SIG" })), text: () => Promise.resolve(JSON.stringify(sessionResult({ pharmacySession: "s1.NEW.SIG" }))) }); };
   w.__t.requireAuth(() => {});
   await new Promise((r) => setTimeout(r, 20));
   assert(sent && sent.action === "createSession" && sent.pharmacySession === "s1.OLD.SIG", JSON.stringify(sent));
@@ -263,7 +283,7 @@ test("まだ新しい入館証は、更新の通信をしない", async () => {
   const w = loadAuth();
   w.__t.saveSession(sessionResult(), "a@b.c");
   let called = false;
-  w.fetch = () => { called = true; return Promise.resolve({ json: () => Promise.resolve({}) }); };
+  w.fetch = () => { called = true; return Promise.resolve({ status: 200, json: () => Promise.resolve({}), text: () => Promise.resolve(JSON.stringify({})) }); };
   w.__t.requireAuth(() => {});
   await new Promise((r) => setTimeout(r, 20));
   assert(!called, "無駄な通信をした");
@@ -271,7 +291,7 @@ test("まだ新しい入館証は、更新の通信をしない", async () => {
 test("サーバーが入館証を拒否（authError）したら、入館証を捨ててログイン画面へ戻る", async () => {
   const w = loadAuth();
   w.__t.saveSession(sessionResult(), "a@b.c");
-  w.fetch = () => Promise.resolve({ json: () => Promise.resolve({ success: false, authError: true }) });
+  w.fetch = () => Promise.resolve({ status: 200, json: () => Promise.resolve({ success: false, authError: true }), text: () => Promise.resolve(JSON.stringify({ success: false, authError: true })) });
   w.__t.authFetch("home");
   await new Promise((r) => setTimeout(r, 20));
   assert(w.__t.getSession() === null, "入館証が残っている");

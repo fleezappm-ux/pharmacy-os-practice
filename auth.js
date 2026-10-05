@@ -332,17 +332,34 @@ function fetchWhoAmIShared() {
   return promise;
 }
 
+// GASは、しばらく使っていないあとの最初の通信などで、JSONではなくGoogleのエラー画面(HTML)を
+// 返すことがあります。その場合は1秒待って1回だけやり直し、それでもだめなら記録を残して失敗にします。
+async function fetchGasJson(action, extraBody, attempt) {
+  const tries = attempt || 1;
+  const response = await fetch(PHARMACY_CONFIG.GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action, ...authCredentials(), ...(extraBody || {}) })
+  });
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    const snippet = String(text || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+    if (tries < 2) {
+      logClientError("GASがHTMLを返したため再試行 " + action, "HTTP " + response.status + " / " + snippet);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return fetchGasJson(action, extraBody, tries + 1);
+    }
+    throw new Error("GASの応答がJSONではありません（HTTP " + response.status + "）" + (snippet ? "：" + snippet : ""));
+  }
+}
+
 async function authFetch(action, extraBody) {
   const startedAt = performance.now();
-  let response;
   let result;
   try {
-    response = await fetch(PHARMACY_CONFIG.GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action, ...authCredentials(), ...(extraBody || {}) })
-    });
-    result = await response.json();
+    result = await fetchGasJson(action, extraBody);
   } catch (e) {
     logClientError("通信失敗 " + action, e && e.message);
     throw e;
