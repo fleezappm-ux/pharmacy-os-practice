@@ -77,7 +77,7 @@ function loadAuth(search) {
   const dom = new JSDOM("<!doctype html><body><div id='auth-gate' hidden></div></body>", { url: "https://x.test/home.html" + (search || ""), runScripts: "outside-only" });
   const w = dom.window;
   w.PHARMACY_CONFIG = { GAS_URL: "https://script.google.com/macros/s/AAA/exec", PHARMACY_NAME: "t", GOOGLE_CLIENT_ID: "x.apps.googleusercontent.com" };
-  w.eval(read("auth.js") + "\n;window.__t={decodeJwtPayload,isTokenValid,logClientError,readClientErrors,readViewCache,writeViewCache,authFetch,perfLog};");
+  w.eval(read("auth.js") + "\n;window.__t={decodeJwtPayload,isTokenValid,logClientError,readClientErrors,readViewCache,writeViewCache,authFetch,perfLog,getSession,saveSession,authCredentials,isLoggedIn,requestSession,ensureSession,clearAuth,requireAuth,handleCredentialResponse,getAuthEmail};");
   return w;
 }
 function jwt(payload) { return "h." + Buffer.from(JSON.stringify(payload)).toString("base64").replace(/=/g, "") + ".s"; }
@@ -145,6 +145,119 @@ test("?perf=1 を付けない限り、計測表示は出ない", () => {
   assert(w2.document.getElementById("perf-box"), "?perf=1 でも表示されない");
 });
 
+
+queue.push({ name: null, fn: () => console.log("3b. 入館証（長持ちログイン）") });
+const FUTURE = () => Math.floor(Date.now() / 1000) + 14 * 86400;
+const sessionResult = (extra) => ({ success: true, pharmacySession: "s1.AAA.BBB", expiresAt: FUTURE(), renewBefore: FUTURE() - 7 * 86400, ...(extra || {}) });
+test("入館証があれば、GASへ入館証を送りGoogleの証明は送らない", async () => {
+  const w = loadAuth();
+  w.__t.saveSession(sessionResult(), "a@b.c");
+  let body;
+  w.fetch = (u, o) => { body = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve({ success: true }) }); };
+  await w.__t.authFetch("home");
+  assert(body.pharmacySession === "s1.AAA.BBB" && body.idToken === undefined, JSON.stringify(body));
+});
+test("入館証がなければ、従来どおりGoogleの証明を送る", async () => {
+  const w = loadAuth();
+  w.sessionStorage.setItem("pharmacyOsIdToken", "GTOKEN");
+  let body;
+  w.fetch = (u, o) => { body = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve({ success: true }) }); };
+  await w.__t.authFetch("home");
+  assert(body.idToken === "GTOKEN" && body.pharmacySession === undefined, JSON.stringify(body));
+});
+test("期限切れの入館証は使われず、削除される", () => {
+  const w = loadAuth();
+  w.localStorage.setItem("pharmacyOsSession", JSON.stringify({ token: "x", exp: Math.floor(Date.now() / 1000) - 5 }));
+  assert(w.__t.getSession() === null, "期限切れが有効扱い");
+  assert(w.localStorage.getItem("pharmacyOsSession") === null, "削除されていない");
+});
+test("入館証が有効なら、Googleの証明が切れていてもログイン済み（ログイン画面を出さない）", () => {
+  const w = loadAuth();
+  w.__t.saveSession(sessionResult(), "a@b.c");
+  let ready = false;
+  w.__t.requireAuth(() => { ready = true; });
+  assert(ready, "onReadyが呼ばれない");
+  assert(w.document.getElementById("auth-gate").hidden === true, "ログイン画面が出た");
+  assert(w.__t.getAuthEmail() === "a@b.c", "メールが引き継がれない");
+});
+test("入館証もGoogleの証明もなければ、ログイン画面を出す", () => {
+  const w = loadAuth();
+  let ready = false;
+  w.__t.requireAuth(() => { ready = true; });
+  assert(!ready && w.document.getElementById("auth-gate").hidden === false);
+});
+test("Googleでログインした直後に、入館証を取りに行って保存する", async () => {
+  const w = loadAuth();
+  const idToken = jwt({ email: "a@b.c", exp: Math.floor(Date.now() / 1000) + 3600 });
+  let sent;
+  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve(sessionResult()) }); };
+  w.__t.handleCredentialResponse({ credential: idToken });
+  await new Promise((r) => setTimeout(r, 20));
+  assert(sent.action === "createSession" && sent.idToken === idToken, JSON.stringify(sent));
+  assert(w.__t.getSession() && w.__t.getSession().email === "a@b.c", "保存されていない");
+});
+test("入館証の取得に失敗しても、Googleのログインのまま使える", async () => {
+  const w = loadAuth();
+  const idToken = jwt({ email: "a@b.c", exp: Math.floor(Date.now() / 1000) + 3600 });
+  w.fetch = () => Promise.reject(new Error("offline"));
+  w.__t.handleCredentialResponse({ credential: idToken });
+  await new Promise((r) => setTimeout(r, 20));
+  assert(w.__t.getSession() === null && w.__t.isLoggedIn() === true, "ログインが壊れた");
+  assert(w.__t.authCredentials().idToken === idToken, "Googleの証明が使われない");
+});
+test("入館証が無いまま有効なGoogleログインで画面を開くと、静かに入館証を取りに行く", async () => {
+  const w = loadAuth();
+  w.sessionStorage.setItem("pharmacyOsIdToken", jwt({ email: "a@b.c", exp: Math.floor(Date.now() / 1000) + 3600 }));
+  let sent = null;
+  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve(sessionResult()) }); };
+  w.__t.requireAuth(() => {});
+  await new Promise((r) => setTimeout(r, 20));
+  assert(sent && sent.action === "createSession", "取りに行かない");
+  assert(w.__t.getSession(), "保存されない");
+});
+test("更新時期（残り7日）を過ぎた入館証は、入館証で更新を依頼する", async () => {
+  const w = loadAuth();
+  const now = Math.floor(Date.now() / 1000);
+  w.localStorage.setItem("pharmacyOsSession", JSON.stringify({ token: "s1.OLD.SIG", exp: now + 3 * 86400, renewBefore: now - 4 * 86400, email: "a@b.c" }));
+  let sent = null;
+  w.fetch = (u, o) => { sent = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve(sessionResult({ pharmacySession: "s1.NEW.SIG" })) }); };
+  w.__t.requireAuth(() => {});
+  await new Promise((r) => setTimeout(r, 20));
+  assert(sent && sent.action === "createSession" && sent.pharmacySession === "s1.OLD.SIG", JSON.stringify(sent));
+  assert(w.__t.getSession().token === "s1.NEW.SIG", "更新されていない");
+});
+test("まだ新しい入館証は、更新の通信をしない", async () => {
+  const w = loadAuth();
+  w.__t.saveSession(sessionResult(), "a@b.c");
+  let called = false;
+  w.fetch = () => { called = true; return Promise.resolve({ json: () => Promise.resolve({}) }); };
+  w.__t.requireAuth(() => {});
+  await new Promise((r) => setTimeout(r, 20));
+  assert(!called, "無駄な通信をした");
+});
+test("サーバーが入館証を拒否（authError）したら、入館証を捨ててログイン画面へ戻る", async () => {
+  const w = loadAuth();
+  w.__t.saveSession(sessionResult(), "a@b.c");
+  w.fetch = () => Promise.resolve({ json: () => Promise.resolve({ success: false, authError: true }) });
+  w.__t.authFetch("home");
+  await new Promise((r) => setTimeout(r, 20));
+  assert(w.__t.getSession() === null, "入館証が残っている");
+  assert(w.document.getElementById("auth-gate").hidden === false, "ログイン画面が出ない");
+});
+test("clearAuth は入館証も消す", () => {
+  const w = loadAuth();
+  w.__t.saveSession(sessionResult(), "a@b.c");
+  w.__t.clearAuth();
+  assert(w.__t.getSession() === null);
+});
+test("入館証の取得に失敗した記録に、入館証やGoogleの証明は入らない", async () => {
+  const w = loadAuth();
+  w.sessionStorage.setItem("pharmacyOsIdToken", jwt({ email: "a@b.c", exp: Math.floor(Date.now() / 1000) + 3600 }));
+  w.fetch = () => Promise.reject(new Error("offline"));
+  await w.__t.requestSession();
+  const raw = w.localStorage.getItem("pharmacyOsErrorLog") || "";
+  assert(raw.includes("入館証") && !raw.includes("eyJ") && !raw.includes("s1."), raw);
+});
 queue.push({ name: null, fn: () => console.log("4. ホーム画面「今日やること」") });
 function loadHome() {
   const html = read("home.html").replace(/<script[^>]*>.*?<\/script>/gs, "");

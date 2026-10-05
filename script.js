@@ -165,7 +165,7 @@ function createPayload(formData) {
 
   return {
     workDate: formData.get("date"),
-    idToken: getIdToken(),
+    ...authCredentials(),
     openingHours,
     isClosed,
     prescriptionCount: Number(formData.get("prescriptionCount") || 0),
@@ -205,7 +205,7 @@ async function sendDailyRecord(payload) {
     return new Promise((resolve, reject) => {
       requireAuth(async () => {
         try {
-          const retryPayload = { ...payload, idToken: getIdToken() };
+          const retryPayload = { ...payload, idToken: undefined, pharmacySession: undefined, ...authCredentials() };
           const retryResult = await sendDailyRecord(retryPayload);
           resolve(retryResult);
         } catch (e) {

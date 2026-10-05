@@ -6,17 +6,99 @@ const AUTH_EMAIL_KEY = "pharmacyOsAuthEmail";
 // 期限のこの秒数前になったら、静かに（画面を出さず）トークンの更新を試みます。
 const AUTH_REFRESH_MARGIN_SECONDS = 300;
 
+// 入館証（GASが発行する署名つきの長持ちログイン。14日間有効）。
+// Googleのログイン証明は約1時間で切れるため、ログイン直後にGASから入館証をもらって端末に保存します。
+// 保存先は localStorage なので、タブを閉じても残ります。管理画面で利用停止にされた場合などは、
+// GASが拒否して再ログイン画面になります（入館証を持っていても権限の確認は毎回サーバーで行われます）。
+const AUTH_SESSION_KEY = "pharmacyOsSession";
+
+function getSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || "null");
+    if (!saved || !saved.token || !saved.exp || saved.exp <= Math.floor(Date.now() / 1000)) {
+      if (saved) localStorage.removeItem(AUTH_SESSION_KEY);
+      return null;
+    }
+    return saved;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveSession(result, email) {
+  if (!result || !result.success || !result.pharmacySession) return;
+  try {
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+      token: result.pharmacySession,
+      exp: result.expiresAt,
+      renewBefore: result.renewBefore,
+      email: email || ""
+    }));
+  } catch (e) {
+    // 保存できなくても、従来どおりGoogleのログインで動きます。
+  }
+}
+
+/** GASへ送る本人確認の情報を返します。入館証があればそれを、なければGoogleのログイン証明を使います。 */
+function authCredentials() {
+  const session = getSession();
+  return session ? { pharmacySession: session.token } : { idToken: getIdToken() };
+}
+
 function getIdToken() {
   return sessionStorage.getItem(AUTH_TOKEN_KEY) || "";
 }
 
 function getAuthEmail() {
-  return sessionStorage.getItem(AUTH_EMAIL_KEY) || "";
+  const own = sessionStorage.getItem(AUTH_EMAIL_KEY);
+  if (own) return own;
+  const session = getSession();
+  return session && session.email ? session.email : "";
 }
 
 function clearAuth() {
   sessionStorage.removeItem(AUTH_TOKEN_KEY);
   sessionStorage.removeItem(AUTH_EMAIL_KEY);
+  try { localStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* 何もしない */ }
+}
+
+/** ログインしているか（有効な入館証、または有効なGoogleログイン証明がある）。 */
+function isLoggedIn() {
+  return !!getSession() || isTokenValid(getIdToken());
+}
+
+let sessionRequestInFlight = false;
+/**
+ * 入館証を新しくもらいます（本人確認の情報は authCredentials() が選びます）。
+ * 失敗しても何もしません。入館証が無いだけで、従来どおりGoogleのログインで動きます。
+ */
+async function requestSession() {
+  if (sessionRequestInFlight) return;
+  sessionRequestInFlight = true;
+  try {
+    const response = await fetch(PHARMACY_CONFIG.GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "createSession", ...authCredentials() })
+    });
+    const result = await response.json();
+    const payload = decodeJwtPayload(getIdToken());
+    const email = (payload && payload.email) || getAuthEmail();
+    if (result && result.success) saveSession(result, email);
+  } catch (e) {
+    logClientError("入館証の取得に失敗", e && e.message);
+  } finally {
+    sessionRequestInFlight = false;
+  }
+}
+
+/** 入館証が無い、または更新時期（残り7日）を過ぎていれば、静かに取り直します。 */
+function ensureSession() {
+  const session = getSession();
+  const now = Math.floor(Date.now() / 1000);
+  if (!session || (session.renewBefore && session.renewBefore <= now)) {
+    if (session || isTokenValid(getIdToken())) requestSession();
+  }
 }
 
 function decodeJwtPayload(token) {
@@ -69,10 +151,13 @@ function handleCredentialResponse(response) {
   const payload = decodeJwtPayload(response.credential);
   sessionStorage.setItem(AUTH_TOKEN_KEY, response.credential);
   if (payload && payload.email) sessionStorage.setItem(AUTH_EMAIL_KEY, payload.email);
+  // 新しくログインした人の入館証を取り直すため、古い入館証は先に捨てます。
+  try { localStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* 何もしない */ }
   hideAuthGate();
   silentRefreshInFlight = false;
   scheduleTokenRefresh();
   applyEditNavVisibility();
+  requestSession();
 
   const callbacks = authReadyCallbacks;
   authReadyCallbacks = [];
@@ -95,9 +180,10 @@ function requireAuth(onReady) {
   if (new URLSearchParams(location.search).get("logout") === "1") {
     clearAuth();
   }
-  if (isTokenValid(getIdToken())) {
+  if (isLoggedIn()) {
     scheduleTokenRefresh();
     applyEditNavVisibility();
+    ensureSession();
     onReady();
     return;
   }
@@ -185,6 +271,8 @@ function scheduleTokenRefresh() {
     clearTimeout(refreshTimer);
     refreshTimer = null;
   }
+  // 入館証があれば、Googleの証明の期限切れを気にする必要はありません。
+  if (getSession()) return;
   const token = getIdToken();
   const payload = token ? decodeJwtPayload(token) : null;
   if (!payload || !payload.exp) return;
@@ -252,7 +340,7 @@ async function authFetch(action, extraBody) {
     response = await fetch(PHARMACY_CONFIG.GAS_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action, idToken: getIdToken(), ...(extraBody || {}) })
+      body: JSON.stringify({ action, ...authCredentials(), ...(extraBody || {}) })
     });
     result = await response.json();
   } catch (e) {
