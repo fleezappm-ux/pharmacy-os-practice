@@ -110,7 +110,7 @@ function loadAuth(search) {
   const dom = new JSDOM("<!doctype html><body><div id='auth-gate' hidden></div></body>", { url: "https://x.test/home.html" + (search || ""), runScripts: "outside-only" });
   const w = dom.window;
   w.PHARMACY_CONFIG = { GAS_URL: "https://script.google.com/macros/s/AAA/exec", PHARMACY_NAME: "t", GOOGLE_CLIENT_ID: "x.apps.googleusercontent.com" };
-  w.eval(read("auth.js") + "\n;window.__t={decodeJwtPayload,isTokenValid,logClientError,readClientErrors,readViewCache,writeViewCache,authFetch,perfLog,getSession,saveSession,authCredentials,isLoggedIn,requestSession,ensureSession,clearAuth,requireAuth,handleCredentialResponse,getAuthEmail};");
+  w.eval(read("auth.js") + "\n;window.__t={decodeJwtPayload,isTokenValid,logClientError,readClientErrors,readViewCache,writeViewCache,authFetch,perfLog,getSession,saveSession,authCredentials,isLoggedIn,requestSession,ensureSession,clearAuth,requireAuth,handleCredentialResponse,getAuthEmail,safeExternalUrl};");
   return w;
 }
 function jwt(payload) { return "h." + Buffer.from(JSON.stringify(payload)).toString("base64").replace(/=/g, "") + ".s"; }
@@ -169,6 +169,14 @@ test("GASがHTMLを2回続けて返したら、原因が分かる文で失敗し
   assert(calls === 2, "calls=" + calls);
   assert(msg.includes("JSONではありません") && msg.includes("503"), msg);
   assert(w.__t.readClientErrors().some((e) => e.kind.includes("通信失敗")), "失敗の記録がない");
+});
+test("safeExternalUrl: http/httpsだけを通し、javascript:やdata:は空にする", () => {
+  const w = loadAuth();
+  const f = w.safeExternalUrl || (w.__t && w.__t.safeExternalUrl);
+  assert(typeof f === "function", "関数がない");
+  assert(f("https://example.com/a?b=1") === "https://example.com/a?b=1", "https");
+  assert(f(" http://example.com ") === "http://example.com", "http+空白");
+  ["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,x", "//evil.com", "vbscript:x", "", null, undefined, "example.com"].forEach((v) => assert(f(v) === "", "通ってしまった: " + v));
 });
 test("サーバーが success:false を返したら記録される（認証エラーは除く）", async () => {
   const w = loadAuth();

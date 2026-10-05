@@ -421,9 +421,9 @@ function showSaveResult(result) {
 
     row.appendChild(text);
 
-    if (item.url) {
+    if (safeExternalUrl(item.url)) {
       const link = document.createElement("a");
-      link.href = item.url;
+      link.href = safeExternalUrl(item.url);
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = "Notionで確認";

@@ -332,6 +332,13 @@ function fetchWhoAmIShared() {
   return promise;
 }
 
+// Notion等の入力欄から来たリンクを画面に出すときは、http/https で始まるものだけを使います
+// （「javascript:」などの危険なリンクを、押せるリンクにしないため）。使えない値は空文字を返します。
+function safeExternalUrl(url) {
+  const text = String(url == null ? "" : url).trim();
+  return /^https?:\/\//i.test(text) ? text : "";
+}
+
 // GASは、しばらく使っていないあとの最初の通信などで、JSONではなくGoogleのエラー画面(HTML)を
 // 返すことがあります。その場合は1秒待って1回だけやり直し、それでもだめなら記録を残して失敗にします。
 async function fetchGasJson(action, extraBody, attempt) {
