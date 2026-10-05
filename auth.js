@@ -246,13 +246,23 @@ function fetchWhoAmIShared() {
 
 async function authFetch(action, extraBody) {
   const startedAt = performance.now();
-  const response = await fetch(PHARMACY_CONFIG.GAS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, idToken: getIdToken(), ...(extraBody || {}) })
-  });
-  const result = await response.json();
+  let response;
+  let result;
+  try {
+    response = await fetch(PHARMACY_CONFIG.GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, idToken: getIdToken(), ...(extraBody || {}) })
+    });
+    result = await response.json();
+  } catch (e) {
+    logClientError("通信失敗 " + action, e && e.message);
+    throw e;
+  }
   recordPerf(action, performance.now() - startedAt);
+  if (result && result.success === false && !result.authError) {
+    logClientError("サーバーが失敗を返しました " + action, result.message);
+  }
 
   if (result.authError) {
     clearAuth();
@@ -366,11 +376,69 @@ function renderPerf() {
   if (!box) {
     box = document.createElement("div");
     box.id = "perf-box";
-    box.style.cssText = "position:fixed;right:4px;bottom:70px;z-index:99999;background:rgba(0,0,0,.8);color:#fff;font:11px/1.4 monospace;padding:6px 8px;border-radius:6px;max-width:60vw;pointer-events:none;white-space:pre-wrap";
+    box.style.cssText = "position:fixed;right:4px;bottom:70px;z-index:99999;background:rgba(0,0,0,.8);color:#fff;font:11px/1.4 monospace;padding:6px 8px;border-radius:6px;max-width:60vw;pointer-events:none;white-space:pre-wrap;max-height:50vh;overflow:hidden";
     document.body.appendChild(box);
   }
-  const nav = performance.getEntriesByType("navigation")[0];
+  const nav = typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation")[0] : null;
   const head = nav ? "画面 DOM完了 " + Math.round(nav.domContentLoadedEventEnd) + "ms / 読込完了 " + Math.round(nav.loadEventEnd || 0) + "ms\n" : "";
-  box.textContent = head + perfLog.join("\n");
+  const errors = readClientErrors();
+  const errText = errors.length
+    ? "\n--- エラー記録 " + errors.length + "件（新しい順に最大5件） ---\n" + errors.slice(-5).reverse().map((x) => x.t.slice(5, 16).replace("T", " ") + " " + x.page + " " + x.kind + (x.detail ? "：" + x.detail : "")).join("\n")
+    : "\nエラー記録なし";
+  box.textContent = head + perfLog.join("\n") + errText;
 }
 window.addEventListener("load", () => setTimeout(renderPerf, 0));
+
+
+/**
+ * 異常の見張り（画面側）。
+ * 画面で起きたエラー、サーバーとの通信の失敗、「失敗しました」という返事を、
+ * この端末の中（localStorage）に最新50件まで記録します。個人情報や入力内容は記録しません。
+ * URLに ?perf=1 を付けて開くと、右下の表示に記録が出ます。ふだんは何も表示しません。
+ * 記録を消すには、URLに ?clearlog=1 を付けて開きます。
+ */
+const ERROR_LOG_KEY = "pharmacyOsErrorLog";
+const ERROR_LOG_MAX = 50;
+
+function readClientErrors() {
+  try {
+    const list = JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function logClientError(kind, detail) {
+  try {
+    const list = readClientErrors();
+    list.push({
+      t: new Date().toISOString(),
+      page: location.pathname.split("/").pop() || "index.html",
+      kind: String(kind || "").slice(0, 80),
+      detail: String(detail || "").slice(0, 200)
+    });
+    localStorage.setItem(ERROR_LOG_KEY, JSON.stringify(list.slice(-ERROR_LOG_MAX)));
+  } catch (e) {
+    // 記録できなくても、画面の動作には影響させません。
+  }
+  renderPerf();
+}
+
+function clearClientErrors() {
+  try { localStorage.removeItem(ERROR_LOG_KEY); } catch (e) { /* 何もしない */ }
+  renderPerf();
+}
+
+window.addEventListener("error", (event) => {
+  logClientError("画面のエラー", (event.message || "") + (event.filename ? " @" + String(event.filename).split("/").pop() + ":" + event.lineno : ""));
+});
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event.reason;
+  logClientError("処理の失敗", reason && reason.message ? reason.message : reason);
+});
+(function initClearLog() {
+  try {
+    if (new URLSearchParams(location.search).get("clearlog") === "1") localStorage.removeItem(ERROR_LOG_KEY);
+  } catch (e) { /* 何もしない */ }
+})();
