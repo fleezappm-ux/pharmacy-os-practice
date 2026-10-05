@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d4d40">
+  <title>項目別詳細 | Pharmacy OS</title>
+  <link rel="stylesheet" href="yearly-detail.css?v=1">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(15,45,38,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}.auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#126c58}.auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#10251f}.auth-gate-desc{margin:0 0 20px;color:#65766f;font-size:.86rem;line-height:1.6}#google-signin-button{display:flex;justify-content:center}.auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+  <main class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">PERFORMANCE ARCHIVE</p>
+        <h1>項目別詳細</h1>
+        <p>月ごとの実績を、必要な情報だけすっきり確認できます。</p>
+      </div>
+      <a class="overview-link" href="yearly.html">一覧に戻る</a>
+      <button id="reload-button" class="reload-button" type="button" aria-label="最新情報に更新">↻</button>
+    </header>
+
+    <section class="control-card" aria-label="表示する年度">
+      <div>
+        <p class="control-label">表示年度</p>
+        <p id="year-range" class="year-range">4月 — 3月</p>
+      </div>
+      <label class="year-select-wrap">
+        <span class="sr-only">年度を選択</span>
+        <select id="fiscal-year-select" class="year-select"></select>
+      </label>
+    </section>
+
+    <p id="yearly-loading" class="loading-message" aria-live="polite">データを読み込んでいます…</p>
+    <nav id="category-tabs" class="category-tabs" aria-label="実績分類"></nav>
+
+    <section id="performance-overview" class="overview-card" aria-live="polite">
+      <div class="overview-heading">
+        <div><p id="category-kicker" class="section-label">PERFORMANCE</p><h2 id="category-title">実績</h2></div>
+        <span id="completion-badge" class="completion-badge">—</span>
+      </div>
+      <div class="overview-grid">
+        <div class="overview-stat overview-stat-primary">
+          <span>最新実績</span><strong id="latest-value">—</strong><small id="latest-month">—</small>
+        </div>
+        <div class="overview-stat">
+          <span>入力月</span><strong id="filled-count">—</strong><small id="month-count-label">—</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="months-section">
+      <div class="months-heading">
+        <div><p class="section-label">MONTHLY DETAIL</p><h2>月ごとの記録</h2></div>
+        <p>月を押すと内訳が開きます</p>
+      </div>
+      <div id="month-list" class="month-list"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item active" href="yearly.html" aria-current="page"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <script src="yearly-detail.js?v=4"></script>
+</body>
+</html>

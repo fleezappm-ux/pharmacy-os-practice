@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pharmacy OSへの参加 | Pharmacy OS</title>
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root{--green:#137a68;--dark:#17394b;--pale:#eef8fb;--line:#dce8ee;--text:#172b35;--muted:#657982;--red:#b32828;--red-bg:#fff0ef}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--pale);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{width:min(100%,420px);padding:32px 26px;background:#fff;border-radius:22px;box-shadow:0 20px 50px rgba(25,69,82,.12);text-align:center}
+    .eyebrow{margin:0 0 6px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:var(--green);text-transform:uppercase}
+    h1{margin:0 0 14px;font-size:1.4rem}
+    p{margin:0 0 18px;color:var(--muted);font-size:.9rem;line-height:1.7}
+    .line-warning{display:none;margin:0 0 18px;padding:14px 16px;border-radius:14px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.85rem;line-height:1.7;text-align:left}
+    .line-warning.show{display:block}
+    #google-signin-button{display:flex;justify-content:center;margin:0 0 10px}
+    .status-message{min-height:1.4em;margin:10px 0 0;font-size:.86rem;font-weight:700}
+    .status-message.error{color:var(--red)}
+    .status-message.success{color:var(--green)}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .profile-form{display:none;text-align:left}
+    .profile-form.show{display:block}
+    .profile-form label{display:block;margin:0 0 12px;font-size:.82rem;font-weight:700;color:var(--muted)}
+    .profile-form input,.profile-form select{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;font:inherit;color:var(--text)}
+    .profile-submit{width:100%;padding:13px;border:0;border-radius:12px;background:var(--green);color:#fff;font:inherit;font-weight:800;cursor:pointer}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="eyebrow">PHARMACY OS</p>
+    <h1>ご招待</h1>
+    <p id="intro-text">Googleアカウントでログインすると、参加手続きが始まります。</p>
+
+    <div id="line-warning" class="line-warning">
+      LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+    </div>
+
+    <div id="google-signin-button"></div>
+
+    <form id="profile-form" class="profile-form">
+      <label>お名前
+        <input id="profile-name" type="text" required maxlength="100" placeholder="例：山田花子">
+      </label>
+      <label>役職
+        <select id="profile-role" required>
+          <option value="">選択してください</option>
+          <option value="owner">開設者</option>
+          <option value="managing_pharmacist">管理薬剤師</option>
+          <option value="pharmacist">薬剤師</option>
+          <option value="clerk">事務</option>
+          <option value="other">その他</option>
+        </select>
+      </label>
+      <label>所属店舗
+        <input id="profile-store" type="text" required maxlength="100" placeholder="例：あおい薬局">
+      </label>
+      <button class="profile-submit" type="submit">登録する</button>
+    </form>
+
+    <p id="status-message" class="status-message" aria-live="polite"></p>
+  </main>
+
+<script src="invite.js?v=2"></script>
+</body>
+</html>

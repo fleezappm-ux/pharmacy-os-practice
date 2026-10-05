@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#176b55">
+    <meta
+      name="description"
+      content="薬局の日次業務をスマートフォンから記録する入力画面です。"
+    >
+    <title>Pharmacy OS | 日次業務入力</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+    <script src="script.js?v=5" defer></script>
+    <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(15,45,38,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#126c58;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#10251f}
+    .auth-gate-desc{margin:0 0 20px;color:#65766f;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}
+    .auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+
+  <body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+
+    <main class="page">
+      <section class="app-card" aria-labelledby="page-title">
+        <header class="app-header">
+          <p class="app-label">Pharmacy OS</p>
+          <h1 id="page-title">日次業務入力</h1>
+          <p class="app-description">業務内容を入力してNotionへ保存します。</p>
+        </header>
+
+        <form id="daily-form" novalidate>
+          <section class="form-section" aria-labelledby="basic-heading">
+            <h2 id="basic-heading">基本情報</h2>
+
+            <div class="form-field">
+              <label for="date">日付</label>
+              <input id="date" name="date" type="date" required>
+            </div>
+
+            <div class="form-field">
+              <label for="opening-type">開局時間</label>
+              <select id="opening-type" name="openingType">
+                <option value="normal">通常営業時間</option>
+                <option value="custom">当番薬局・任意設定</option>
+                <option value="closed">休業日</option>
+              </select>
+              <p id="opening-summary" class="field-note"></p>
+            </div>
+
+            <div id="custom-opening-fields" class="conditional-panel" hidden>
+              <div class="time-range">
+                <div class="form-field">
+                  <label for="opening-start">開始</label>
+                  <input id="opening-start" name="openingStart" type="time">
+                </div>
+                <span class="range-separator" aria-hidden="true">～</span>
+                <div class="form-field">
+                  <label for="opening-end">終了</label>
+                  <input id="opening-end" name="openingEnd" type="time">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="prescription-count">処方箋枚数</label>
+              <div class="input-with-unit">
+                <input
+                  id="prescription-count"
+                  name="prescriptionCount"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  required
+                >
+                <span aria-hidden="true">枚</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="absence-heading">
+            <h2 id="absence-heading">不在時間</h2>
+
+            <div class="form-field">
+              <label for="manager-absence">管理者不在</label>
+              <select id="manager-absence" name="managerAbsenceEnabled">
+                <option value="no">なし</option>
+                <option value="yes">あり</option>
+              </select>
+            </div>
+
+            <div id="manager-absence-fields" class="conditional-panel" hidden>
+              <div class="time-range">
+                <div class="form-field">
+                  <label for="manager-start">開始</label>
+                  <input id="manager-start" name="managerStart" type="time">
+                </div>
+                <span class="range-separator" aria-hidden="true">～</span>
+                <div class="form-field">
+                  <label for="manager-end">終了</label>
+                  <input id="manager-end" name="managerEnd" type="time">
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="manager-responder">不在時対応者</label>
+                <input
+                  id="manager-responder"
+                  name="managerResponder"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="例：薬剤師 山田"
+                >
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="pharmacist-absence">薬剤師不在</label>
+              <select id="pharmacist-absence" name="pharmacistAbsenceEnabled">
+                <option value="no">なし</option>
+                <option value="yes">あり</option>
+              </select>
+            </div>
+
+            <div id="pharmacist-absence-fields" class="conditional-panel" hidden>
+              <div class="time-range">
+                <div class="form-field">
+                  <label for="pharmacist-start">開始</label>
+                  <input id="pharmacist-start" name="pharmacistStart" type="time">
+                </div>
+                <span class="range-separator" aria-hidden="true">～</span>
+                <div class="form-field">
+                  <label for="pharmacist-end">終了</label>
+                  <input id="pharmacist-end" name="pharmacistEnd" type="time">
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="pharmacist-responder">不在時対応者</label>
+                <input
+                  id="pharmacist-responder"
+                  name="pharmacistResponder"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="例：事務 山田"
+                >
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="notes-heading">
+            <h2 id="notes-heading">記録・申し送り</h2>
+
+            <div class="form-field">
+              <label for="inquiry">疑義照会</label>
+              <select id="inquiry" name="inquiryOccurred">
+                <option value="no">なし</option>
+                <option value="yes">あり</option>
+              </select>
+            </div>
+
+            <div id="inquiry-fields" class="conditional-panel" hidden>
+              <div class="form-field">
+                <label for="inquiry-details">疑義照会の詳細</label>
+                <textarea
+                  id="inquiry-details"
+                  name="inquiryDetails"
+                  rows="4"
+                  placeholder="照会内容と回答、対応結果など"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="special-notes">その他の特記事項</label>
+              <textarea
+                id="special-notes"
+                name="specialNotes"
+                rows="3"
+                placeholder="必要な場合のみ入力"
+              ></textarea>
+            </div>
+
+            <div class="form-field">
+              <label for="handover">申し送り</label>
+              <textarea
+                id="handover"
+                name="handover"
+                rows="4"
+                placeholder="翌日以降へ引き継ぐ内容"
+              ></textarea>
+            </div>
+
+            <div class="form-field">
+              <label for="confirmed-by">確認者</label>
+              <input id="confirmed-by" name="confirmedBy" type="text" readonly value="読み込み中…">
+              <select id="confirmed-by-select" name="confirmedBySelect" hidden>
+                <option value="">未選択</option>
+              </select>
+            </div>
+          </section>
+
+          <button id="submit-button" type="submit">Notionへ保存</button>
+          <p id="status-message" class="status-message" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <div id="duplicate-modal" class="duplicate-modal" hidden>
+      <div class="duplicate-modal-box">
+        <h3>この日の日次記録は既に入力されています</h3>
+        <p>過去の日付は、誤った重複登録を防ぐため新規保存できません。記録を編集しますか？</p>
+        <div class="duplicate-modal-actions">
+          <button id="duplicate-modal-cancel" type="button" class="secondary">閉じる</button>
+          <button id="duplicate-modal-edit" type="button" class="primary">記録を編集する</button>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .duplicate-modal{position:fixed;inset:0;z-index:998;display:flex;align-items:center;justify-content:center;background:rgba(15,45,38,.55);padding:20px}
+      .duplicate-modal[hidden]{display:none}
+      .duplicate-modal-box{width:min(100%,380px);padding:26px 22px;background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+      .duplicate-modal-box h3{margin:0 0 10px;font-size:1.1rem;color:#b32828}
+      .duplicate-modal-box p{margin:0 0 20px;font-size:.86rem;line-height:1.7;color:#3a4a44}
+      .duplicate-modal-actions{display:flex;gap:10px;justify-content:flex-end}
+      .duplicate-modal-actions button{padding:10px 16px;border-radius:10px;font:inherit;font-weight:800;cursor:pointer;border:0}
+      .duplicate-modal-actions .secondary{background:#eef6f3;color:#3a4a44}
+      .duplicate-modal-actions .primary{background:#126c58;color:#fff}
+    </style>
+
+    <nav class="bottom-nav" aria-label="メインメニュー">
+      <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+      <a class="nav-item active" href="index.html" aria-current="page"><span>▣</span><small>日次業務</small></a>
+      <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+      <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+      <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+      <a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+    </nav>
+
+    <noscript>
+      <p class="noscript-message">
+        このアプリを使用するにはJavaScriptを有効にしてください。
+      </p>
+    </noscript>
+  </body>
+</html>

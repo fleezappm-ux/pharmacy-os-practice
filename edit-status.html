@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ステータスの編集 | Pharmacy OS</title>
+<link rel="stylesheet" href="edit.css?v=4">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(15,45,38,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#126c58;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#10251f}
+    .auth-gate-desc{margin:0 0 20px;color:#65766f;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}
+    .auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+
+  <main class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">PHARMACY OS</p>
+      <h1>ステータスの編集</h1>
+      <p>届出・許可登録・薬剤師名簿などの台帳を編集できます。</p>
+      <button id="reload-button" class="reload-button" type="button" aria-label="再読み込み">↻</button>
+    </header>
+
+    <a class="text-button" href="edit.html">← 編集トップに戻る</a>
+    <p id="edit-loading" class="loading-message" aria-live="polite">データを読み込んでいます…</p>
+
+    <nav class="edit-tabs" aria-label="編集分類">
+      <button class="edit-tab active" data-target="notice-edit-section">各種届出</button>
+      <button class="edit-tab" data-target="institution-edit-section">試験検査機関</button>
+      <button class="edit-tab" data-target="license-edit-section">許可・登録</button>
+      <button class="edit-tab" data-target="pharmacist-edit-section">薬剤師</button>
+      <button class="edit-tab" data-target="seller-edit-section">登録販売者</button>
+      <button class="edit-tab" data-target="basic-edit-section">基本情報</button>
+    </nav>
+
+    <section id="notice-edit-section" class="card edit-section">
+      <div class="section-heading">
+        <div><p class="section-label">NOTICES</p><h2>各種届出</h2></div>
+        <button id="add-notice-button" class="primary-small" type="button">＋ 新規追加</button>
+      </div>
+      <div id="notice-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="institution-edit-section" class="card edit-section" hidden>
+      <div class="section-heading">
+        <div><p class="section-label">TEST INSTITUTIONS</p><h2>試験検査機関の利用契約</h2></div>
+        <button id="add-institution-button" class="primary-small" type="button">＋ 新規追加</button>
+      </div>
+      <div id="institution-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="license-edit-section" class="card edit-section" hidden>
+      <div class="section-heading">
+        <div><p class="section-label">LICENSES</p><h2>許可・登録</h2></div>
+        <button id="add-license-button" class="primary-small" type="button">＋ 新規追加</button>
+      </div>
+      <div id="license-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="pharmacist-edit-section" class="card edit-section" hidden>
+      <div class="section-heading">
+        <div><p class="section-label">PHARMACISTS</p><h2>薬剤師名簿</h2></div>
+        <button id="add-pharmacist-button" class="primary-small" type="button">＋ 新規追加</button>
+      </div>
+      <div id="pharmacist-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="seller-edit-section" class="card edit-section" hidden>
+      <div class="section-heading">
+        <div><p class="section-label">REGISTERED SELLERS</p><h2>登録販売者名簿</h2></div>
+        <button id="add-seller-button" class="primary-small" type="button">＋ 新規追加</button>
+      </div>
+      <div id="seller-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="basic-edit-section" class="card edit-section" hidden>
+      <p class="section-label">BASIC INFORMATION</p><h2>薬局基本情報</h2>
+      <form id="basic-form">
+        <input id="basic-id" type="hidden">
+        <input id="basic-insurance-pharmacy-id" type="hidden">
+        <label>薬局・店舗販売業の名称 <b>*</b><input id="basic-name" required></label>
+        <label>開設者氏名(又は代表者)<input id="basic-owner"></label>
+        <label>管理者氏名<input id="basic-manager"></label>
+        <label>所在地<textarea id="basic-address" rows="2"></textarea></label>
+        <label>開局時間<textarea id="basic-hours" rows="3"></textarea></label>
+        <label>休日<input id="basic-holiday"></label>
+        <label>薬局許可年月日<input id="basic-license-date" type="date"></label>
+        <label>保険薬局指定年月日<input id="basic-insurance-date" type="date"></label>
+        <label>保険薬局コード番号<input id="basic-insurance-code"></label>
+        <label>保険薬局の指定更新期限<input id="basic-insurance-renewal" type="date"></label>
+        <div class="form-actions"><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </main>
+
+  <div id="notice-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="notice-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="notice-modal-title">届出を編集</h2></div>
+      <form id="notice-form">
+        <input id="notice-id" type="hidden">
+        <label>届出種別 <b>*</b><input id="notice-type" required></label>
+        <label>取得状況 <b>*</b>
+          <select id="notice-acquisition" required>
+            <option value="取得済み">取得済み</option>
+            <option value="未取得">未取得</option>
+            <option value="対象外">対象外</option>
+            <option value="要確認">要確認</option>
+          </select>
+        </label>
+        <label>有効期限・更新条件<textarea id="notice-deadline" rows="2"></textarea></label>
+        <label>指定年月日<input id="notice-date" type="date"></label>
+        <label>指定番号・備考<textarea id="notice-number" rows="3"></textarea></label>
+        <label>並び順 <b>*</b><input id="notice-order" type="number" min="1" step="1" required></label>
+        <div class="form-actions"><button id="notice-delete-button" class="danger-button" type="button" hidden>削除する</button><button class="secondary-button" type="button" data-close-modal>キャンセル</button><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="license-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="license-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="license-modal-title">許可・登録を編集</h2></div>
+      <form id="license-form">
+        <input id="license-id" type="hidden">
+        <label>種類 <b>*</b><input id="license-type" required></label>
+        <label>取得状況 <b>*</b>
+          <select id="license-acquisition" required>
+            <option value="取得済み">取得済み</option>
+            <option value="未取得">未取得</option>
+            <option value="対象外">対象外</option>
+            <option value="要確認">要確認</option>
+          </select>
+        </label>
+        <label>許可(登録・認定・免許)番号<input id="license-number"></label>
+        <label>有効期限<input id="license-date" type="date"></label>
+        <label>並び順 <b>*</b><input id="license-order" type="number" min="1" step="1" required></label>
+        <div class="form-actions"><button id="license-delete-button" class="danger-button" type="button" hidden>削除する</button><button class="secondary-button" type="button" data-close-modal>キャンセル</button><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="pharmacist-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pharmacist-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="pharmacist-modal-title">薬剤師を編集</h2></div>
+      <form id="pharmacist-form">
+        <input id="pharmacist-id" type="hidden">
+        <label>氏名 <b>*</b><input id="pharmacist-name" required></label>
+        <label>薬剤師登録番号<input id="pharmacist-license-number"></label>
+        <label>保険薬剤師登録番号<input id="pharmacist-insurance-number"></label>
+        <label>登録年月日<input id="pharmacist-date" type="date"></label>
+        <label>備考(異動月日)<textarea id="pharmacist-note" rows="2"></textarea></label>
+        <label>並び順 <b>*</b><input id="pharmacist-order" type="number" min="1" step="1" required></label>
+        <div class="form-actions"><button id="pharmacist-delete-button" class="danger-button" type="button" hidden>削除する</button><button class="secondary-button" type="button" data-close-modal>キャンセル</button><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="seller-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="seller-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="seller-modal-title">登録販売者を編集</h2></div>
+      <form id="seller-form">
+        <input id="seller-id" type="hidden">
+        <label>氏名 <b>*</b><input id="seller-name" required></label>
+        <label>登録年月日<input id="seller-date" type="date"></label>
+        <label>備考<textarea id="seller-note" rows="2"></textarea></label>
+        <div class="form-actions"><button id="seller-delete-button" class="danger-button" type="button" hidden>削除する</button><button class="secondary-button" type="button" data-close-modal>キャンセル</button><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="institution-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="institution-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="institution-modal-title">試験検査機関を編集</h2></div>
+      <form id="institution-form">
+        <input id="institution-id" type="hidden">
+        <label>利用機関名 <b>*</b><input id="institution-name" required></label>
+        <label>契約更新期限<input id="institution-date" type="date"></label>
+        <div class="form-actions"><button id="institution-delete-button" class="danger-button" type="button" hidden>削除する</button><button class="secondary-button" type="button" data-close-modal>キャンセル</button><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="delete-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-delete></div>
+    <section class="confirm-panel" role="alertdialog" aria-modal="true">
+      <div class="warning-icon">!</div><h2 id="delete-modal-title">削除しますか？</h2><p id="delete-target-name"></p><p class="muted">この操作は取り消せません。</p>
+      <button id="confirm-delete" class="danger-button" type="button">削除する</button><button class="secondary-button" type="button" data-close-delete>キャンセル</button>
+    </section>
+  </div>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item active" href="edit.html" aria-current="page"><span>✎</span><small>編集</small></a>
+  </nav>
+
+<script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+<script src="edit-status.js?v=4"></script>
+</body>
+</html>

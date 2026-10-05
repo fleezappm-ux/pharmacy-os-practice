@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>保険調剤実績 | Pharmacy OS</title>
+  <link rel="stylesheet" href="insurance.css?v=5">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(17,42,51,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#137a68;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#172b35}
+    .auth-gate-desc{margin:0 0 20px;color:#657982;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}.auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+
+  <main class="page-shell">
+    <header class="page-header">
+      <a class="back-link" href="monthly.html">← 月次業務入力へ戻る</a>
+      <p class="eyebrow">PHARMACY OS</p>
+      <h1>保険調剤実績</h1>
+      <p>対象月の保険調剤実績と在宅実績を入力してNotionへ保存します。</p>
+    </header>
+
+    <form id="insurance-form">
+      <section class="card">
+        <p class="section-label">TARGET MONTH</p>
+        <h2>対象月</h2>
+        <div class="month-picker">
+          <label><span>西暦</span><select id="target-year" required></select></label>
+          <label><span>月</span><select id="target-month-number" required></select></label>
+        </div>
+      </section>
+
+      <section class="card table-card">
+        <p class="section-label">INSURANCE RESULTS</p>
+        <h2>保険調剤実績</h2>
+        <p class="help">未入力の欄は空欄のままで大丈夫です。合計は自動計算します。</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>区分</th><th>件数</th><th>医科（回数）</th><th>歯科（回数）</th><th>合計</th><th>報酬点数</th></tr></thead>
+            <tbody id="insurance-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <p class="section-label">INSTITUTIONS</p>
+        <h2>発行医療機関数</h2>
+        <div class="institution-grid">
+          <label>医科（回数）<input id="institution-medical" type="number" min="0" inputmode="numeric"></label>
+          <label>歯科（回数）<input id="institution-dental" type="number" min="0" inputmode="numeric"></label>
+          <label>合計<input id="institution-total" type="number" readonly tabindex="-1"></label>
+        </div>
+      </section>
+
+      <section class="card table-card">
+        <p class="section-label">HOME CARE</p>
+        <h2>在宅患者への薬学的管理及び指導の実施状況</h2>
+        <p class="help">保険調剤実績とは別のNotion DBへ保存します。</p>
+        <div class="table-scroll">
+          <table class="homecare-table">
+            <thead><tr><th>区分</th><th>件数（件）</th><th>回数（回）</th></tr></thead>
+            <tbody>
+              <tr>
+                <th scope="row">医療保険<br><small>在宅患者訪問薬剤管理指導</small></th>
+                <td><input id="homecare-medical-cases" type="number" min="0" inputmode="numeric"></td>
+                <td><input id="homecare-medical-visits" type="number" min="0" inputmode="numeric"></td>
+              </tr>
+              <tr>
+                <th scope="row">介護保険<br><small>居宅療養管理指導 等</small></th>
+                <td><input id="homecare-care-cases" type="number" min="0" inputmode="numeric"></td>
+                <td><input id="homecare-care-visits" type="number" min="0" inputmode="numeric"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <button id="save-button" class="save-button" type="submit">Notionへ保存</button>
+      <p id="status-message" class="status-message" aria-live="polite"></p>
+    </form>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインナビゲーション">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item active" href="monthly.html" aria-current="page"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <script src="insurance.js?v=5"></script>
+</body>
+</html>

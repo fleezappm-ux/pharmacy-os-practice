@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#137a68">
+  <title>カレンダー | Pharmacy OS</title>
+  <link rel="stylesheet" href="calendar.css?v=4">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(17,42,51,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#137a68;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#172b35}
+    .auth-gate-desc{margin:0 0 20px;color:#657982;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}
+    .auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+  <main class="page-shell">
+    <header class="calendar-appbar">
+      <a class="home-button" href="home.html" aria-label="ホームへ戻る">‹</a>
+      <h1 id="appbar-title">2026年9月</h1>
+      <button id="today-button" class="appbar-today" type="button">今日</button>
+      <button id="reload-button" class="appbar-reload" type="button" aria-label="再読み込み">↻</button>
+    </header>
+
+    <p id="calendar-loading" class="loading-message" aria-live="polite">読み込んでいます…</p>
+
+    <div class="calendar-toolbar">
+      <button id="prev-month-button" type="button" aria-label="前の期間">‹</button>
+      <strong id="month-label">−</strong>
+      <button id="next-month-button" type="button" aria-label="次の期間">›</button>
+    </div>
+
+    <nav class="filter-row compact-filters" aria-label="予定の種類で絞り込み">
+      <button class="filter-chip active" data-filter="all">すべて</button>
+      <button class="filter-chip" data-filter="勉強会">勉強会</button>
+      <button class="filter-chip" data-filter="duty">当番医・当番薬局</button>
+      <button class="filter-chip" data-filter="その他">その他</button>
+      <button class="filter-chip" id="oneppo-filter-chip" data-filter="oneppo">一包化</button>
+    </nav>
+
+    <section id="oneppo-control" class="oneppo-control compact-oneppo" hidden aria-label="一包化サポート設定">
+      <span>一包化 <b id="oneppo-status" class="oneppo-status">確認中</b></span>
+      <div class="oneppo-control-actions">
+        <a id="oneppo-link" class="oneppo-open-link" href="oneppo.html" hidden>開く</a>
+        <button id="oneppo-toggle-button" class="oneppo-toggle-button" type="button" hidden></button>
+      </div>
+    </section>
+
+    <section id="month-view" class="calendar-surface">
+      <div class="weekday-row">
+        <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+      </div>
+      <div id="month-grid" class="month-grid"></div>
+    </section>
+
+    <section id="week-view" class="calendar-surface alternate-view" hidden></section>
+    <section id="single-day-view" class="calendar-surface alternate-view" hidden></section>
+    <section id="list-view" class="calendar-surface alternate-view" hidden></section>
+
+    <section id="day-detail" class="day-detail" hidden>
+      <h3 id="day-detail-heading">−</h3>
+      <div id="day-detail-list"></div>
+    </section>
+  </main>
+
+  <button id="add-event-fab" class="fab-add" type="button" aria-label="予定を追加">
+    <span class="fab-add-icon" aria-hidden="true">＋</span><span class="fab-add-label">予定追加</span>
+  </button>
+
+  <div id="event-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="event-modal-title">
+      <div class="modal-head">
+        <h2 id="event-modal-title">予定を追加</h2>
+        <button class="modal-close" type="button" data-close-modal aria-label="閉じる">×</button>
+      </div>
+
+      <div class="field">
+        <label for="event-type">予定種別</label>
+        <select id="event-type">
+          <option value="勉強会">勉強会</option>
+          <option value="当番医">当番医</option>
+          <option value="当番薬局">当番薬局</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="event-title">予定名</label>
+        <input id="event-title" type="text" placeholder="例：糖尿病治療薬 勉強会">
+      </div>
+      <div class="field">
+        <label for="event-date">実施日</label>
+        <input id="event-date" type="date">
+      </div>
+      <label class="checkbox-field"><input id="event-allday" type="checkbox"> 終日</label>
+      <div id="event-time-fields" class="field-row">
+        <div class="field"><label for="event-start-time">開始時刻</label><input id="event-start-time" type="time"></div>
+        <div class="field"><label for="event-end-time">終了時刻</label><input id="event-end-time" type="time"></div>
+      </div>
+      <div class="field">
+        <label id="event-place-label" for="event-place">場所・機関名</label>
+        <input id="event-place" type="text">
+      </div>
+      <div id="event-phone-field" class="field" hidden>
+        <label for="event-phone">電話番号</label>
+        <input id="event-phone" type="text" inputmode="tel">
+      </div>
+      <div id="event-people-field" class="field">
+        <label id="event-people-label" for="event-people">参加者・関係者</label>
+        <input id="event-people" type="text">
+      </div>
+      <div class="field">
+        <label for="event-note">備考</label>
+        <textarea id="event-note"></textarea>
+      </div>
+
+      <label class="checkbox-field"><input id="event-has-prep" type="checkbox"> 準備期間あり</label>
+      <div id="event-prep-fields" class="field-row" hidden>
+        <div class="field"><label for="event-prep-start">準備開始（実施日の何日前）</label><input id="event-prep-start" type="number" min="0" step="1" value="0"></div>
+        <div class="field"><label for="event-prep-end">準備終了（実施日の何日前）</label><input id="event-prep-end" type="number" min="0" step="1" value="0"></div>
+      </div>
+
+      <div class="field">
+        <label for="event-repeat">繰り返し</label>
+        <select id="event-repeat">
+          <option value="なし">繰り返しなし</option>
+          <option value="毎週">毎週</option>
+          <option value="毎月">毎月</option>
+          <option value="毎年">毎年</option>
+        </select>
+      </div>
+      <div id="event-repeat-end-field" class="field" hidden>
+        <label for="event-repeat-end">繰り返し終了日</label>
+        <input id="event-repeat-end" type="date">
+      </div>
+      <p class="hint">繰り返し終了日を空欄にすると、無期限で繰り返します。</p>
+
+      <div id="notification-section" hidden>
+        <div class="field-divider"></div>
+        <p class="field-heading">通知設定</p>
+        <div id="notification-list-in-modal"></div>
+        <div class="field-row">
+          <div class="field">
+            <label for="notify-timing">タイミング</label>
+            <select id="notify-timing">
+              <option value="当日">当日</option>
+              <option value="1日前">1日前</option>
+              <option value="3日前">3日前</option>
+              <option value="1週間前">1週間前</option>
+              <option value="任意日数前">任意日数前</option>
+            </select>
+          </div>
+          <div class="field" id="notify-custom-days-field" hidden>
+            <label for="notify-custom-days">日数</label>
+            <input id="notify-custom-days" type="number" min="0" step="1">
+          </div>
+        </div>
+        <div class="field">
+          <label for="notify-target-type">通知対象</label>
+          <select id="notify-target-type">
+            <option value="全員">全員</option>
+            <option value="指定参加者">指定参加者</option>
+          </select>
+        </div>
+        <div class="field" id="notify-target-emails-field" hidden>
+          <label for="notify-target-emails">対象者のメールアドレス（カンマ区切り）</label>
+          <input id="notify-target-emails" type="text" placeholder="a@example.com, b@example.com">
+        </div>
+        <button id="add-notification-button" class="ghost-button" type="button">この通知を追加する</button>
+        <p id="notification-form-status" class="form-status" aria-live="polite"></p>
+      </div>
+      <p id="notification-hint" class="hint" hidden>通知は、予定を保存した後に設定できます。</p>
+
+      <button id="save-event-button" class="primary-button" type="button">保存する</button>
+      <button id="delete-event-button" class="danger-button" type="button" hidden>この予定を削除</button>
+      <p id="event-form-status" class="form-status" aria-live="polite"></p>
+    </section>
+
+  </div>
+
+  <div id="scope-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="scope-modal-title">
+      <div class="modal-head">
+        <h2 id="scope-modal-title">どの範囲に適用しますか？</h2>
+        <button class="modal-close" type="button" data-close-modal aria-label="閉じる">×</button>
+      </div>
+      <div class="scope-choice">
+        <button type="button" data-scope="this_only"><strong>この予定だけ</strong><small>この日の分だけ変更・削除します</small></button>
+        <button type="button" data-scope="from_this_date"><strong>この日以降</strong><small>この日から先の繰り返しに適用します</small></button>
+        <button type="button" data-scope="all"><strong>すべての予定</strong><small>この繰り返し予定の全体に適用します</small></button>
+      </div>
+    </section>
+  </div>
+
+  <nav class="bottom-nav calendar-bottom-nav" aria-label="カレンダー表示">
+    <button class="nav-item active" type="button" data-view="month"><span>▦</span><small>月</small></button>
+    <button class="nav-item" type="button" data-view="week"><span>Ⅲ</span><small>週</small></button>
+    <button class="nav-item" type="button" data-view="day"><span>□</span><small>日</small></button>
+    <button class="nav-item" type="button" data-view="list"><span>☷</span><small>一覧</small></button>
+    <a id="bottom-oneppo-link" class="nav-item" href="oneppo.html" hidden><span>●</span><small>一包化</small></a>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <script src="calendar.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>利用者管理・招待 | Pharmacy OS</title>
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <style>
+    :root{--green:#126c58;--dark:#0d4d40;--pale:#eef6f3;--line:#d4e1dc;--text:#10251f;--muted:#65766f;--red:#b32828;--red-bg:#fff0ef;--orange:#a85a00;--orange-bg:#fff2dc}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--pale);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .page-shell{width:min(100%,720px);margin:0 auto;padding:0 18px 60px}
+    .page-header{margin:0 -18px 18px;padding:30px 26px;background:var(--dark);color:#fff;border-radius:0 0 28px 28px}
+    .page-header h1{margin:6px 0;font-size:1.7rem}
+    .page-header p{margin:0;opacity:.85;font-size:.88rem}
+    .eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+    .card{margin:0 0 18px;padding:22px;border-radius:20px;background:#fff;box-shadow:0 12px 30px rgba(23,70,57,.08)}
+    .card h2{margin:0 0 14px;font-size:1.1rem}
+    .slot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+    .slot-box{padding:14px;background:var(--pale);border-radius:14px;text-align:center}
+    .slot-box strong{display:block;font-size:1.5rem;color:var(--green)}
+    .slot-box span{font-size:.75rem;color:var(--muted)}
+    .inline-form{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+    .field-label{display:flex;flex-direction:column;gap:4px;font-size:.76rem;font-weight:800;color:var(--muted)}
+    input,select{padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit}
+    button{padding:10px 14px;border:0;border-radius:10px;background:var(--green);color:#fff;font:inherit;font-weight:800;cursor:pointer}
+    button.secondary{background:#fff;border:1px solid var(--line);color:var(--text)}
+    button.danger{background:#fff;border:1px solid #efaaaa;color:var(--red)}
+    button.small{padding:6px 10px;font-size:.8rem}
+    .list-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;flex-wrap:wrap}
+    .list-main{min-width:0}
+    .list-title{display:block;font-weight:800;font-size:.92rem;word-break:break-all}
+    .list-detail{display:block;margin-top:3px;color:var(--muted);font-size:.78rem}
+    .badge{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;font-size:.72rem;font-weight:800}
+    .badge.green{background:#e2f3ed;color:var(--green)}
+    .badge.orange{background:var(--orange-bg);color:var(--orange)}
+    .badge.gray{background:#eee;color:#777}
+    .list-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .empty-message{margin:0;padding:14px;border-radius:14px;background:var(--pale);color:var(--muted);font-size:.85rem}
+    .loading-message{text-align:center;color:var(--muted);font-weight:700}
+    .loading-message.error{color:var(--red)}
+    .denied-message{text-align:center;padding:60px 20px;color:var(--muted)}
+    .invite-url-box{margin-top:10px;padding:12px;background:var(--pale);border-radius:12px;font-size:.82rem;word-break:break-all}
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(15,45,38,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#126c58;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#10251f}
+    .auth-gate-desc{margin:0 0 20px;color:var(--muted);font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}
+    .auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+  <main class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">PHARMACY OS</p>
+      <h1>利用者管理・招待</h1>
+      <p>従業員の招待URL発行と、登録済み利用者の管理を行います。</p>
+    </header>
+
+    <p id="loading-message" class="loading-message">確認しています…</p>
+    <div id="denied-area" class="denied-message" hidden>この画面は管理者のみ利用できます。</div>
+
+    <div id="admin-content" hidden>
+      <section class="card">
+        <h2>あなたの表示名</h2>
+        <p style="margin:0 0 12px;color:var(--muted);font-size:.82rem">日次業務の「記録者氏名」「最終更新者氏名」として使われます。管理者アカウントは自動登録されるため、最初に一度設定してください。</p>
+        <div class="inline-form">
+          <input id="own-name-input" type="text" placeholder="例：降旗敏文" maxlength="100">
+          <button id="own-name-save" type="button">保存</button>
+        </div>
+        <div id="own-name-result" style="margin-top:8px;font-size:.82rem"></div>
+      </section>
+
+      <section class="card">
+        <h2>アカウント枠</h2>
+        <div class="slot-grid">
+          <div class="slot-box"><strong id="slot-limit">-</strong><span>上限</span></div>
+          <div class="slot-box"><strong id="slot-used">-</strong><span>使用中</span></div>
+          <div class="slot-box"><strong id="slot-remaining">-</strong><span>残り</span></div>
+        </div>
+        <div class="inline-form">
+          <input id="slot-limit-input" type="number" min="0" step="1" placeholder="新しい上限">
+          <button id="slot-limit-save" type="button">上限を変更</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>招待URLを発行する</h2>
+        <div class="inline-form">
+          <label class="field-label">
+            種類
+            <select id="invite-type">
+              <option value="group">グループ招待（複数人）</option>
+              <option value="individual">個別招待（1人限定）</option>
+            </select>
+          </label>
+          <label id="invite-max-uses-label" class="field-label">
+            登録可能人数
+            <input id="invite-max-uses" type="number" min="1" step="1" value="5">
+          </label>
+          <label class="field-label">
+            有効日数
+            <input id="invite-expires" type="number" min="1" step="1" value="7">
+          </label>
+          <button id="invite-create-button" type="button">発行する</button>
+        </div>
+        <div id="invite-result" class="invite-url-box" hidden></div>
+      </section>
+
+      <section class="card">
+        <h2>招待URL一覧</h2>
+        <div id="invite-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+      </section>
+
+      <section class="card">
+        <h2>登録利用者一覧</h2>
+        <div id="user-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+      </section>
+    </div>
+  </main>
+
+<script src="admin.js?v=5"></script>
+</body>
+</html>

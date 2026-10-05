@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>月次業務の編集 | Pharmacy OS</title>
+<link rel="stylesheet" href="edit.css?v=4">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(15,45,38,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#126c58;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#10251f}
+    .auth-gate-desc{margin:0 0 20px;color:#65766f;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}
+    .auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+
+  <main class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">PHARMACY OS</p>
+      <h1>月次業務の編集</h1>
+      <p>後発品調剤率・処方箋集中率・保険調剤実績・在宅患者管理・処方箋調べを編集できます。</p>
+      <button id="reload-button" class="reload-button" type="button" aria-label="再読み込み">↻</button>
+    </header>
+
+    <a class="text-button" href="edit.html">← 編集トップに戻る</a>
+    <p id="edit-loading" class="loading-message" aria-live="polite">データを読み込んでいます…</p>
+
+    <nav class="edit-tabs" aria-label="編集分類">
+      <button class="edit-tab active" data-target="generic-edit-section">後発品調剤率</button>
+      <button class="edit-tab" data-target="concentration-edit-section">処方箋集中率</button>
+      <button class="edit-tab" data-target="insurance-edit-section">保険調剤実績</button>
+      <button class="edit-tab" data-target="homecare-edit-section">在宅患者管理</button>
+      <button class="edit-tab" data-target="survey-edit-section">処方箋調べ</button>
+    </nav>
+
+    <section id="generic-edit-section" class="card edit-section">
+      <p class="section-label">GENERIC RATE</p><h2>後発品調剤率</h2>
+      <p class="help-text">直近36ヶ月分を一覧表示しています。タップして編集できます。</p>
+      <div id="generic-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="concentration-edit-section" class="card edit-section" hidden>
+      <p class="section-label">CONCENTRATION</p><h2>処方箋集中率</h2>
+      <p class="help-text">直近36ヶ月分を一覧表示しています。月をタップすると、その月の医療機関別の明細を追加・編集できます。</p>
+      <div id="concentration-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="insurance-edit-section" class="card edit-section" hidden>
+      <p class="section-label">INSURANCE</p><h2>保険調剤実績</h2>
+      <p class="help-text">直近36ヶ月分を一覧表示しています。月をタップすると、その月の区分別の明細を追加・編集できます。</p>
+      <div id="insurance-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="homecare-edit-section" class="card edit-section" hidden>
+      <p class="section-label">HOMECARE</p><h2>在宅患者への薬学的管理</h2>
+      <p class="help-text">直近36ヶ月分を一覧表示しています。月をタップすると、その月の区分別の明細を追加・編集できます。</p>
+      <div id="homecare-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+
+    <section id="survey-edit-section" class="card edit-section" hidden>
+      <p class="section-label">PRESCRIPTION SURVEY</p><h2>処方箋枚数・受付回数等調べ</h2>
+      <p class="help-text">直近36ヶ月分を一覧表示しています。タップして編集できます。</p>
+      <div id="survey-edit-list" class="stack-list"><p class="empty-message">読み込み中です。</p></div>
+    </section>
+  </main>
+
+  <div id="generic-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="generic-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="generic-modal-title">後発品調剤率を編集</h2></div>
+      <form id="generic-form">
+        <input id="generic-id" type="hidden">
+        <input id="generic-month-key" type="hidden">
+        <p id="generic-month-display" class="muted"></p>
+        <label>全医薬品規格単位数量<input id="generic-all" type="number" step="any"></label>
+        <label>後発品あり規格単位数量<input id="generic-eligible" type="number" step="any"></label>
+        <label>後発医薬品規格単位数量<input id="generic-generic" type="number" step="any"></label>
+        <label>新指標割合<input id="generic-new-rate" type="number" step="any"></label>
+        <label>カットオフ値割合<input id="generic-cutoff" type="number" step="any"></label>
+        <div class="form-actions"><button id="generic-delete-button" class="danger-button" type="button" hidden>削除する</button><button class="secondary-button" type="button" data-close-modal>キャンセル</button><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="subrow-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="subrow-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="subrow-modal-title">明細</h2></div>
+      <p id="subrow-month-display" class="muted"></p>
+      <div id="subrow-list" class="stack-list"></div>
+      <form id="subrow-form">
+        <input id="subrow-id" type="hidden">
+        <label id="subrow-title-label">項目名 <b>*</b><input id="subrow-title" required></label>
+        <div id="subrow-number-fields"></div>
+        <div class="form-actions"><button id="subrow-delete-button" class="danger-button" type="button" hidden>削除する</button><button id="subrow-cancel-button" class="secondary-button" type="button">クリア</button><button class="primary-button" type="submit">この明細を保存</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="survey-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="survey-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="survey-modal-title">処方箋調べを編集</h2></div>
+      <form id="survey-form">
+        <input id="survey-id" type="hidden">
+        <input id="survey-month-key" type="hidden">
+        <p id="survey-month-display" class="muted"></p>
+        <label>処方箋受付回数<input id="survey-count" type="number" step="1"></label>
+        <label>歯科（処方箋受付枚数）<input id="survey-dental" type="number" step="1"></label>
+        <label>眼科（処方箋受付枚数）<input id="survey-ophthalmology" type="number" step="1"></label>
+        <label>耳鼻咽喉科（処方箋受付枚数）<input id="survey-ent" type="number" step="1"></label>
+        <label>その他（処方箋受付枚数）<input id="survey-other" type="number" step="1"></label>
+        <div class="survey-calc-preview">
+          <span>合計（処方箋受付枚数）：<strong id="survey-total-preview">0</strong> 枚</span>
+          <p class="muted">保存すると、日次業務の記録日数をもとに1日平均取扱処方箋枚数も自動計算されます。</p>
+        </div>
+        <div class="form-actions"><button id="survey-delete-button" class="danger-button" type="button" hidden>削除する</button><button class="secondary-button" type="button" data-close-modal>キャンセル</button><button class="primary-button" type="submit">保存する</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="delete-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-delete></div>
+    <section class="confirm-panel" role="alertdialog" aria-modal="true">
+      <div class="warning-icon">!</div><h2 id="delete-modal-title">削除しますか？</h2><p id="delete-target-name"></p><p class="muted">この操作は取り消せません。</p>
+      <button id="confirm-delete" class="danger-button" type="button">削除する</button><button class="secondary-button" type="button" data-close-delete>キャンセル</button>
+    </section>
+  </div>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item active" href="edit.html" aria-current="page"><span>✎</span><small>編集</small></a>
+  </nav>
+
+<script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+<script src="edit-monthly.js?v=5"></script>
+</body>
+</html>

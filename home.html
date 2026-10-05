@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7fbff">
+  <meta name="description" content="Pharmacy OS あおい薬局ホーム">
+  <title>Pharmacy OS | あおい薬局</title>
+  <link rel="manifest" href="manifest.webmanifest?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/aoi-icon-32-v2.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon-v2.png">
+  <link rel="stylesheet" href="home.css?v=11">
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <script src="home.js?v=13" defer></script>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <img src="assets/aoi-icon-192.png" alt="" width="76" height="76">
+      <p class="auth-gate-title">AOI PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="side-rail" aria-label="サイドメニュー">
+      <a class="side-brand" href="home.html" aria-label="Pharmacy OS ホーム">
+        <img src="assets/aoi-icon-192.png" alt="" width="54" height="54">
+        <span><strong>AOI</strong><small>Pharmacy OS</small></span>
+      </a>
+      <nav class="side-nav" aria-label="メインメニュー">
+        <a class="active" href="home.html"><span>⌂</span>ホーム</a>
+        <a href="index.html"><span>▣</span>日次業務</a>
+        <a href="monthly.html"><span>▦</span>月次業務入力</a>
+        <a href="yearly.html"><span>▤</span>年度実績</a>
+        <a href="status.html"><span>◉</span>薬局ステータス</a>
+        <a id="side-edit-link" href="edit.html"><span>✎</span>編集</a>
+      </nav>
+      <div class="side-pharmacy">
+        <strong id="side-pharmacy-name">あおい薬局</strong>
+        <span>長野県松本市里山辺12090-2</span><span>TEL 0263-87-5203</span><span>FAX 0263-87-5204</span>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="mobile-header">
+        <a class="mobile-brand" href="home.html"><img src="assets/aoi-icon-192.png" alt="" width="42" height="42"><span><strong>AOI</strong><small>Pharmacy OS</small></span></a>
+        <button id="mobile-refresh-button" class="circle-button" type="button" aria-label="最新情報に更新">↻</button>
+      </header>
+      <div class="desktop-topbar">
+        <div class="search-shell"><span>⌕</span><p>必要な業務を左のメニューから選択</p></div>
+        <div class="account-chip"><span class="avatar">A</span><strong>あおい薬局</strong></div>
+      </div>
+
+      <main class="home-main">
+        <section class="welcome-hero" aria-labelledby="pharmacy-name-heading">
+          <div class="welcome-copy"><p class="eyebrow">TODAY AT AOI</p><p id="today-label" class="today-label"></p><h1 id="pharmacy-name-heading">あおい薬局</h1><p class="welcome-message">今日も、地域の健康を支える一日を。</p></div>
+          <img class="hero-mark" src="assets/aoi-icon-512.png" alt="" width="240" height="240">
+          <button id="refresh-button" class="circle-button hero-refresh" type="button" aria-label="最新情報に更新">↻</button>
+        </section>
+
+        <div class="dashboard-grid">
+          <div class="dashboard-main">
+            <section class="panel calendar-panel" aria-labelledby="week-heading">
+              <div class="section-heading"><div><p class="section-kicker">CALENDAR</p><h2 id="week-heading">今週の営業カレンダー</h2></div><a class="text-button" href="calendar.html">全体を見る <span>›</span></a></div>
+              <div id="week-calendar" class="week-calendar" aria-label="1週間カレンダー"></div>
+            </section>
+            <section id="notification-panel" class="panel" aria-labelledby="notification-heading" hidden>
+              <div class="section-heading"><div><p class="section-kicker">NOTIFICATIONS</p><h2 id="notification-heading">本日の通知</h2></div></div>
+              <div id="notification-list" class="handover-list" aria-live="polite"></div>
+            </section>
+            <section class="panel" aria-labelledby="handover-heading">
+              <div class="section-heading"><div><p class="section-kicker">HANDOVER</p><h2 id="handover-heading">最新の申し送り</h2></div><a class="text-button" href="index.html#handover">入力する <span>›</span></a></div>
+              <div id="handover-list" class="handover-list" aria-live="polite"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+            </section>
+            <section class="panel monthly-panel" aria-labelledby="monthly-heading">
+              <div class="section-heading monthly-title"><div><p class="section-kicker">MONTHLY SNAPSHOT</p><h2 id="monthly-heading">前月の実績</h2></div><a class="text-button" href="yearly.html">詳しく見る <span>›</span></a></div>
+              <div class="metric-grid">
+                <article class="metric-card featured-metric"><span class="metric-icon pink">▤</span><div><p id="average-label">先月の1日あたり平均処方箋枚数</p><p class="metric-value"><span id="average-value">―</span><small>枚</small></p><p id="average-note" class="metric-note">読込中</p></div></article>
+                <article class="metric-card"><span class="metric-icon blue">↗</span><div><p id="generic-rate-label">後発品使用率</p><p class="metric-value"><span id="generic-rate-value">―</span><small id="generic-rate-unit">%</small></p><p id="generic-rate-note" class="metric-note">前月分</p></div></article>
+                <article class="metric-card concentration-card"><span class="metric-icon green">◎</span><div><p id="concentration-label">先月までの処方箋集中率 上位4医療機関</p><ol id="concentration-list" class="concentration-list"><li>データ未取込</li></ol></div></article>
+              </div>
+            </section>
+          </div>
+
+          <aside class="dashboard-aside">
+            <section class="panel task-panel" aria-labelledby="tasks-heading"><div class="section-heading"><div><p class="section-kicker">TASKS</p><h2 id="tasks-heading">今日やること</h2></div><span class="status-chip">準備中</span></div><div class="task-placeholder"><span class="task-icon">✓</span><div><strong>期限の近い業務</strong><p>タスクDB連携後に自動表示します。</p></div></div></section>
+                        <section class="pharmacy-card" aria-label="薬局情報"><p class="section-kicker">AOI PHARMACY</p><h2>あおい薬局</h2><p>長野県松本市里山辺12090-2</p><div><a href="tel:0263875203">TEL 0263-87-5203</a><span>FAX 0263-87-5204</span></div></section>
+          </aside>
+        </div>
+        <p id="home-status" class="home-status" aria-live="polite"></p>
+      </main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="メインナビゲーション">
+      <a class="nav-item active" href="home.html" aria-current="page"><span>⌂</span><small>ホーム</small></a><a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a><a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a><a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a><a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a><a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+    </nav>
+    <div id="reminder-modal" class="reminder-modal" hidden><section class="reminder-dialog" role="dialog" aria-modal="true" aria-labelledby="reminder-title"><button id="reminder-close" class="reminder-close" type="button" aria-label="閉じる">×</button><p class="section-kicker">REMINDER</p><h2 id="reminder-title">未入力の業務があります</h2><p id="reminder-summary" class="reminder-summary"></p><div id="reminder-list" class="reminder-list"></div><button id="reminder-snooze" class="reminder-snooze" type="button">今日は表示しない</button></section></div>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </div>
+</body>
+</html>

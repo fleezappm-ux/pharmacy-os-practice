@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>薬局ステータス | Pharmacy OS</title>
+  <link rel="stylesheet" href="status.css?v=5">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(17,42,51,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#137a68;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#172b35}
+    .auth-gate-desc{margin:0 0 20px;color:#657982;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}.auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+
+  <main class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">PHARMACY OS</p>
+      <h1>薬局ステータス</h1>
+      <p>許可・登録・届出などの状況をまとめて確認します。</p>
+      <button id="reload-button" class="reload-button" type="button" aria-label="再読み込み">↻</button>
+    </header>
+
+    <p id="status-loading" class="loading-message" aria-live="polite">データを読み込んでいます…</p>
+
+    <nav class="status-tabs" aria-label="ステータス分類">
+      <button class="status-tab" data-target="basic-section">概要</button>
+      <button class="status-tab" data-target="license-section">許可・登録</button>
+      <button class="status-tab active" data-target="notice-section">各種届出</button>
+      <button class="status-tab" data-target="institution-section">試験検査機関</button>
+      <button class="status-tab" data-target="pharmacist-section">薬剤師</button>
+      <button class="status-tab" data-target="seller-section">登録販売者</button>
+    </nav>
+
+    <section class="card alert-card">
+      <p class="section-label">DEADLINE ALERT</p>
+      <h2>更新期限アラート</h2>
+      <div id="deadline-alerts" class="stack-list"><p class="empty-message">確認中です。</p></div>
+    </section>
+
+    <section id="basic-section" class="card">
+      <p class="section-label">BASIC INFORMATION</p>
+      <h2>薬局基本情報</h2>
+      <dl class="info-grid">
+        <div><dt>名称</dt><dd id="basic-name">―</dd></div>
+        <div><dt>開設者氏名</dt><dd id="basic-owner">―</dd></div>
+        <div><dt>管理薬剤師氏名</dt><dd id="basic-manager">―</dd></div>
+        <div><dt>所在地</dt><dd id="basic-address">―</dd></div>
+        <div class="wide"><dt>開局時間</dt><dd id="basic-hours">―</dd></div>
+        <div><dt>保険薬局コード番号</dt><dd id="basic-insurance-code">―</dd></div>
+        <div><dt>保険薬局の指定更新期限</dt><dd id="basic-insurance-renewal">―</dd></div>
+      </dl>
+    </section>
+
+    <section id="license-section" class="card">
+      <div class="section-heading"><div><p class="section-label">LICENSES</p><h2>許可・登録</h2></div></div>
+      <div class="notice-summary" aria-label="許可・登録の集計">
+        <div><span>許可・登録件数</span><strong id="license-total">0</strong><small>件</small></div>
+        <div class="summary-valid"><span>有効</span><strong id="license-valid">0</strong><small>件</small></div>
+        <div class="summary-soon"><span>更新が近い</span><strong id="license-soon">0</strong><small>件</small></div>
+        <div class="summary-expired"><span>期限切れ</span><strong id="license-expired">0</strong><small>件</small></div>
+        <div class="summary-none"><span>未取得</span><strong id="license-none">0</strong><small>件</small></div>
+      </div>
+      <div class="notice-tools">
+        <input id="license-search" type="search" placeholder="種類で検索" aria-label="種類で検索">
+        <select id="license-filter" aria-label="ステータスで絞り込み">
+          <option value="all">ステータス：すべて</option>
+          <option value="valid">有効</option>
+          <option value="soon">更新が近い</option>
+          <option value="expired">期限切れ</option>
+          <option value="none">未取得</option>
+          <option value="check">期限未設定</option>
+        </select>
+      </div>
+      <div id="license-list" class="stack-list"><p class="empty-message">確認中です。</p></div>
+    </section>
+
+    <section id="notice-section" class="card notice-card">
+      <div class="section-heading">
+        <div><p class="section-label">NOTICES</p><h2>各種届出</h2></div>
+      </div>
+      <div class="notice-summary" aria-label="各種届出の集計">
+        <div><span>届出件数</span><strong id="notice-total">0</strong><small>件</small></div>
+        <div class="summary-valid"><span>有効</span><strong id="notice-valid">0</strong><small>件</small></div>
+        <div class="summary-soon"><span>更新が近い</span><strong id="notice-soon">0</strong><small>件</small></div>
+        <div class="summary-expired"><span>期限切れ</span><strong id="notice-expired">0</strong><small>件</small></div>
+        <div class="summary-none"><span>届出なし</span><strong id="notice-none">0</strong><small>件</small></div>
+      </div>
+      <div class="notice-tools">
+        <input id="notice-search" type="search" placeholder="届出種別で検索" aria-label="届出種別で検索">
+        <select id="notice-filter" aria-label="ステータスで絞り込み">
+          <option value="all">ステータス：すべて</option>
+          <option value="valid">有効</option>
+          <option value="soon">更新が近い</option>
+          <option value="expired">期限切れ</option>
+          <option value="none">届出なし</option>
+          <option value="check">要確認</option>
+        </select>
+      </div>
+      <div class="notice-table-head"><span>#</span><span>届出種別</span><span>有効期限・更新条件</span><span>指定年月日</span><span>状態</span><span></span></div>
+      <div id="notice-list" class="notice-list"><p class="empty-message">確認中です。</p></div>
+    </section>
+
+    <section id="institution-section" class="card">
+      <p class="section-label">TEST INSTITUTIONS</p>
+      <h2>試験検査機関の利用契約</h2>
+      <div id="institution-list" class="stack-list"><p class="empty-message">確認中です。</p></div>
+    </section>
+
+    <section class="card survey-card">
+      <p class="section-label">PRESCRIPTION SURVEY</p>
+      <h2>処方箋枚数・受付回数等調べ</h2>
+      <div class="survey-status"><strong id="survey-count">0/13</strong><span id="survey-label" class="badge gray">未入力</span></div>
+    </section>
+
+    <section id="pharmacist-section" class="card">
+      <p class="section-label">PHARMACISTS</p><h2>薬剤師名簿</h2>
+      <div id="pharmacist-list" class="name-list"><p class="empty-message">確認中です。</p></div>
+    </section>
+
+    <section id="seller-section" class="card">
+      <p class="section-label">REGISTERED SELLERS</p><h2>登録販売者名簿</h2>
+      <div id="seller-list" class="name-list"><p class="empty-message">確認中です。</p></div>
+    </section>
+  </main>
+
+  <div id="notice-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="notice-modal-title">
+      <div class="modal-head"><button class="text-button" type="button" data-close-modal>← 戻る</button><h2 id="notice-modal-title">届出の詳細</h2></div>
+      <div id="notice-detail-view"></div>
+    </section>
+  </div>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item active" href="status.html" aria-current="page"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+  </nav>
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <script src="status.js?v=6"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>編集 | Pharmacy OS</title>
+<link rel="stylesheet" href="edit.css?v=6">
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(17,42,51,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#137a68;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem}
+    .auth-gate-desc{margin:0 0 20px;color:#657982;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}.auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+  <main class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">PHARMACY OS</p>
+      <h1>編集</h1>
+      <p>編集したい分類を選んでください。</p>
+    </header>
+
+    <p id="edit-top-message" class="loading-message"></p>
+
+    <div class="group-select">
+      <a id="group-card-daily" class="group-card" href="edit-daily.html" hidden>
+        <span class="group-card-title">日次業務</span>
+        <span class="group-card-desc">日報の編集・削除</span>
+      </a>
+      <a id="group-card-monthly" class="group-card" href="edit-monthly.html" hidden>
+        <span class="group-card-title">月次業務入力</span>
+        <span class="group-card-desc">後発品調剤率・集中率・保険実績など</span>
+      </a>
+      <a id="group-card-other" class="group-card" href="edit-status.html" hidden>
+        <span class="group-card-title">ステータス</span>
+        <span class="group-card-desc">届出・許可登録・薬剤師名簿など台帳</span>
+      </a>
+    </div>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item active" href="edit.html" aria-current="page"><span>✎</span><small>編集</small></a>
+  </nav>
+
+  <script>
+    requireAuth(async () => {
+      const messageEl = document.getElementById("edit-top-message");
+      try {
+        const result = await authFetch("whoAmI");
+        if (!result.success) throw new Error(result.message || "確認に失敗しました。");
+        const permissions = result.permissions || {};
+        document.getElementById("group-card-daily").hidden = !permissions.canEditDaily;
+        document.getElementById("group-card-monthly").hidden = !permissions.canEditMonthly;
+        document.getElementById("group-card-other").hidden = !permissions.canEditOther;
+        if (!permissions.canEditDaily && !permissions.canEditMonthly && !permissions.canEditOther) {
+          messageEl.textContent = "現在、編集できる項目がありません。権限の付与については管理者に確認してください。";
+        } else {
+          messageEl.textContent = "";
+        }
+      } catch (e) {
+        messageEl.className = "loading-message error";
+        messageEl.textContent = "確認できませんでした。時間をおいて開き直してください。";
+      }
+    });
+  </script>
+</body>
+</html>

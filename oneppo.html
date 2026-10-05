@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#137a68">
+  <title>一包化管理 | Pharmacy OS</title>
+  <link rel="stylesheet" href="oneppo.css?v=2">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(17,42,51,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#137a68;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#172b35}
+    .auth-gate-desc{margin:0 0 20px;color:#657982;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}
+    .auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+  <main class="page-shell">
+    <header class="page-header oneppo-appbar">
+      <a class="back-link" href="calendar.html" aria-label="カレンダーへ戻る"><span aria-hidden="true">‹</span> カレンダー</a>
+      <div class="oneppo-title">
+        <p class="eyebrow">PHARMACY OS</p>
+        <h1>一包化管理</h1>
+        <p>一包化サポート対象の患者を管理します。</p>
+      </div>
+      <button id="reload-button" class="reload-button" type="button" aria-label="再読み込み">↻</button>
+      <button id="oneppo-toggle-off-button" class="oneppo-off-button" type="button" hidden>サポートをOFFにする</button>
+    </header>
+
+    <p id="oneppo-loading" class="loading-message" aria-live="polite">読み込んでいます…</p>
+    <p id="oneppo-disabled-message" class="empty-message" hidden>この店舗では、一包化サポート機能が現在OFFになっています。有効にする場合は管理者にご確認ください。</p>
+    <div id="oneppo-toggle-admin" hidden style="margin:10px 0;">
+      <button id="oneppo-toggle-button" class="action-button primary" type="button">一包化サポートをONにする</button>
+    </div>
+
+    <div id="oneppo-main-content" hidden>
+
+    <div class="search-tools">
+      <input id="search-input" type="text" placeholder="氏名・表示名で検索">
+      <nav class="filter-row" aria-label="状態で絞り込み">
+        <button class="filter-chip active" data-filter-state="all">すべて</button>
+        <button class="filter-chip" data-filter-state="継続中">継続中</button>
+        <button class="filter-chip" data-filter-state="一時停止">一時停止</button>
+        <button class="filter-chip" data-filter-state="終了">終了</button>
+      </nav>
+      <nav class="filter-row" aria-label="区分で絞り込み">
+        <button class="filter-chip active" data-filter-category="all">区分すべて</button>
+        <button class="filter-chip" data-filter-category="外来">外来</button>
+        <button class="filter-chip" data-filter-category="在宅・訪問">在宅・訪問</button>
+        <button class="filter-chip" data-filter-category="施設">施設</button>
+      </nav>
+    </div>
+
+    <button id="add-patient-button" class="add-patient-button" type="button">＋ 患者を追加</button>
+
+    <div id="patient-list"></div>
+    </div>
+  </main>
+
+  <div id="patient-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="patient-modal-title">
+      <div class="modal-head">
+        <h2 id="patient-modal-title">患者を追加</h2>
+        <button class="modal-close" type="button" data-close-modal aria-label="閉じる">×</button>
+      </div>
+
+      <div class="field"><label for="patient-name">氏名（フルネーム）</label><input id="patient-name" type="text"></div>
+      <div class="field"><label for="patient-display-name">カレンダー表示名</label><input id="patient-display-name" type="text" placeholder="例：田中"></div>
+      <div class="field">
+        <label for="patient-category">区分</label>
+        <select id="patient-category">
+          <option value="外来">外来</option>
+          <option value="在宅・訪問">在宅・訪問</option>
+          <option value="施設">施設</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="patient-status">状態</label>
+        <select id="patient-status">
+          <option value="継続中">継続中</option>
+          <option value="一時停止">一時停止</option>
+          <option value="終了">終了</option>
+        </select>
+      </div>
+
+      <div class="checkbox-row">
+        <label class="checkbox-field"><input id="patient-print-usage" type="checkbox"> 用法印字</label>
+        <label class="checkbox-field"><input id="patient-print-name" type="checkbox"> 氏名印字</label>
+        <label class="checkbox-field"><input id="patient-print-date" type="checkbox"> 日付印字</label>
+        <label class="checkbox-field"><input id="patient-print-institution" type="checkbox"> 医療機関名印字</label>
+        <label class="checkbox-field"><input id="patient-print-drug" type="checkbox"> 薬品名印字</label>
+      </div>
+
+      <div class="field"><label for="patient-note">作り方・注意点メモ</label><textarea id="patient-note" rows="3"></textarea></div>
+      <div class="field"><label for="patient-manual-next">手動指定の次回来局予定日</label><input id="patient-manual-next" type="date"></div>
+      <label class="checkbox-field" style="margin-bottom:14px"><input id="patient-manual-priority" type="checkbox"> 手動指定を優先する</label>
+
+      <button id="save-patient-button" class="primary-button" type="button">保存する</button>
+      <p id="patient-form-status" class="form-status" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <div id="done-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="done-modal-title">
+      <div class="modal-head">
+        <h2 id="done-modal-title">「済」の記録</h2>
+        <button class="modal-close" type="button" data-close-modal aria-label="閉じる">×</button>
+      </div>
+      <div class="field"><label for="done-actual-date">対応日</label><input id="done-actual-date" type="date"></div>
+      <div class="field"><label for="done-prescription-date">処方日（対応日と同じ場合は空欄）</label><input id="done-prescription-date" type="date"></div>
+      <div class="field"><label for="done-actual-days">処方日数</label><input id="done-actual-days" type="number" min="1" step="1"></div>
+
+      <div class="field-divider"></div>
+      <p class="field-heading">印字期間（自動計算後に手動で直す場合のみ入力）</p>
+      <div class="field-row">
+        <div class="field"><label for="done-print-start">印字開始日</label><input id="done-print-start" type="date"></div>
+        <div class="field"><label for="done-print-end">印字終了日</label><input id="done-print-end" type="date"></div>
+      </div>
+
+      <div class="field-divider"></div>
+      <p class="field-heading">次回来局予定日（手動で指定する場合のみ）</p>
+      <div class="field"><label for="done-manual-next">次回来局予定日</label><input id="done-manual-next" type="date"></div>
+      <label class="checkbox-field" style="margin-bottom:14px"><input id="done-manual-priority" type="checkbox"> この日付を優先する</label>
+      <p class="hint">何も入力しなければ、自動計算した次回予定日がそのまま使われます（以前の手動指定は解除されます）。</p>
+
+      <button id="confirm-done-button" class="primary-button" type="button">「済」として記録する</button>
+      <p id="done-form-status" class="form-status" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <div id="changed-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="changed-modal-title">
+      <div class="modal-head">
+        <h2 id="changed-modal-title">変更・中止の記録</h2>
+        <button class="modal-close" type="button" data-close-modal aria-label="閉じる">×</button>
+      </div>
+      <div class="field">
+        <label for="changed-reason">理由</label>
+        <select id="changed-reason">
+          <option value="来局状況不明">来局状況不明</option>
+          <option value="服薬・受診継続困難">服薬・受診継続困難</option>
+          <option value="入院">入院</option>
+          <option value="永眠">永眠</option>
+          <option value="他薬局へ変更">他薬局へ変更</option>
+          <option value="一包化中止">一包化中止</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="field"><label for="changed-reason-free">補足（任意）</label><textarea id="changed-reason-free" rows="2"></textarea></div>
+      <button id="confirm-changed-button" class="primary-button" type="button">記録する</button>
+      <p id="changed-form-status" class="form-status" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+  <script src="oneppo.js?v=3"></script>
+</body>
+</html>

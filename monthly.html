@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#137a68">
+    <meta name="description" content="Pharmacy OS 月次業務入力">
+    <title>Pharmacy OS | 月次業務入力</title>
+    <link rel="stylesheet" href="monthly.css?v=5">
+    <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=5"></script>
+    <script src="monthly.js?v=4" defer></script>
+    <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(17,42,51,.55);backdrop-filter:blur(2px)}
+    .auth-gate[hidden]{display:none}
+    .auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#137a68;text-transform:uppercase}
+    .auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#172b35}
+    .auth-gate-desc{margin:0 0 20px;color:#657982;font-size:.86rem;line-height:1.6}
+    #google-signin-button{display:flex;justify-content:center}.auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+
+  <body>
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <p class="auth-gate-title">PHARMACY OS</p>
+      <h2>ログインしてください</h2>
+      <p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p>
+      <div id="auth-line-warning" class="auth-line-warning" hidden>
+        LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。
+      </div>
+      <div id="google-signin-button"></div>
+    </div>
+  </div>
+
+
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <a class="back-to-list-link" href="yearly.html">← 一覧へ戻る</a>
+          <p class="eyebrow">Pharmacy OS</p>
+          <h1>月次業務入力</h1>
+          <p>CSV形式のファイルを選んでNotionへ保存します。</p>
+        </div>
+        <button id="refresh-button" class="icon-button" type="button" aria-label="最新情報に更新">↻</button>
+      </header>
+
+      <main class="monthly-main">
+        <section class="panel" aria-labelledby="summary-heading">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Summary</p>
+              <h2 id="summary-heading">前月のまとめ</h2>
+            </div>
+          </div>
+
+          <div class="summary-grid">
+            <article class="summary-card">
+              <p id="generic-summary-label">後発品使用率</p>
+              <p class="summary-value"><span id="generic-summary-value">―</span><small id="generic-summary-unit">%</small></p>
+              <a id="generic-summary-link" class="summary-input-link" href="#generic-heading" hidden>入力する</a>
+            </article>
+            <article class="summary-card wide">
+              <p id="concentration-summary-label">処方箋集中率 上位4医療機関</p>
+              <ol id="concentration-summary-list" class="ranking-list">
+                <li>データ未取込</li>
+              </ol>
+              <a id="concentration-summary-link" class="summary-input-link" href="#concentration-heading" hidden>入力する</a>
+            </article>
+          </div>
+        </section>
+
+
+        <section class="panel upload-panel" aria-labelledby="generic-heading">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Generic</p>
+              <h2 id="generic-heading">後発品調剤率</h2>
+            </div>
+            <span id="generic-badge" class="status-chip">未選択</span>
+          </div>
+          <p class="help-text">CSV形式。複数月が入っている場合は月ごとに保存します。</p>
+          <label class="file-picker">
+            <span>CSVファイルを選択</span>
+            <input id="generic-file" type="file" accept=".csv,text/csv">
+          </label>
+          <p id="generic-file-name" class="file-name">ファイルが選択されていません。</p>
+          <button id="generic-upload-button" class="primary-button" type="button" disabled>後発品CSVを取り込む</button>
+          <p id="generic-result" class="result-message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel upload-panel" aria-labelledby="concentration-heading">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Concentration</p>
+              <h2 id="concentration-heading">処方箋集中率</h2>
+            </div>
+            <span id="concentration-badge" class="status-chip">未選択</span>
+          </div>
+          <p class="help-text">「MTOK0010.CSV」形式。医療機関ごとの受付回数と構成比率を保存します。</p>
+          <label class="file-picker">
+            <span>CSVファイルを選択</span>
+            <input id="concentration-file" type="file" accept=".csv,text/csv">
+          </label>
+          <p id="concentration-file-name" class="file-name">ファイルが選択されていません。</p>
+          <button id="concentration-upload-button" class="primary-button" type="button" disabled>集中率CSVを取り込む</button>
+          <p id="concentration-result" class="result-message" aria-live="polite"></p>
+        </section>
+
+        <p id="monthly-status" class="page-status" aria-live="polite"></p>
+        <section class="panel" aria-labelledby="insurance-heading">
+          <div class="section-heading">
+            <div><p class="section-kicker">Insurance</p><h2 id="insurance-heading">保険調剤実績</h2></div>
+            <span class="status-chip ready">入力式</span>
+          </div>
+          <p class="help-text">医保・国保などの月間実績と、発行医療機関数を入力します。</p>
+          <a class="primary-button insurance-link" href="insurance.html">入力画面を開く</a>
+        </section>
+
+        <section class="panel" aria-labelledby="survey-heading">
+          <div class="section-heading">
+            <div><p class="section-kicker">Prescription Survey</p><h2 id="survey-heading">処方箋枚数・受付回数等調べ</h2></div>
+            <span class="status-chip ready">入力式</span>
+          </div>
+          <p class="help-text">診療科別の処方箋枚数を入力すると、合計と1日平均取扱処方箋枚数を自動計算します。</p>
+          <label>対象月<input id="survey-month-picker" type="month"></label>
+          <label>処方箋受付回数<input id="survey-count" type="number" step="1"></label>
+          <label>歯科（処方箋受付枚数）<input id="survey-dental" type="number" step="1"></label>
+          <label>眼科（処方箋受付枚数）<input id="survey-ophthalmology" type="number" step="1"></label>
+          <label>耳鼻咽喉科（処方箋受付枚数）<input id="survey-ent" type="number" step="1"></label>
+          <label>その他（処方箋受付枚数）<input id="survey-other" type="number" step="1"></label>
+          <p class="survey-total-preview">合計（処方箋受付枚数）：<strong id="survey-total-preview">0</strong> 枚</p>
+          <button id="survey-save-button" class="primary-button" type="button">保存する</button>
+          <p id="survey-result" class="result-message" aria-live="polite"></p>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="メインナビゲーション">
+        <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+        <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+        <a class="nav-item active" href="monthly.html" aria-current="page"><span>▦</span><small>月次業務</small></a>
+        <a class="nav-item" href="yearly.html"><span>▤</span><small>年度実績</small></a>
+        <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+        <a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+      </nav>
+    </div>
+  </body>
+</html>

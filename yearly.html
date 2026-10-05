@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17394b">
+  <title>年度実績 | Pharmacy OS</title>
+  <link rel="stylesheet" href="yearly.css?v=8">
+  <style>
+    .auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(17,42,51,.55);backdrop-filter:blur(2px)}.auth-gate[hidden]{display:none}.auth-gate-box{width:min(90%,360px);padding:32px 28px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}.auth-gate-title{margin:0 0 4px;font-size:.75rem;font-weight:800;letter-spacing:.1em;color:#137a68}.auth-gate-box h2{margin:0 0 10px;font-size:1.3rem;color:#172b35}.auth-gate-desc{margin:0 0 20px;color:#657982;font-size:.86rem;line-height:1.6}#google-signin-button{display:flex;justify-content:center}.auth-line-warning{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#fff6e5;border:1px solid #f0c464;color:#7a5300;font-size:.78rem;line-height:1.6;text-align:left}
+  </style>
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate" hidden><div class="auth-gate-box"><p class="auth-gate-title">PHARMACY OS</p><h2>ログインしてください</h2><p class="auth-gate-desc">許可されたGoogleアカウントでログインすると使えます。</p><div id="auth-line-warning" class="auth-line-warning" hidden>LINE内のブラウザでは、Googleログインが正常に開かない場合があります。右上のメニューから「他のアプリで開く」「Chromeで開く」「ブラウザで開く」などを選んで、外部ブラウザで開き直してください。</div><div id="google-signin-button"></div></div></div>
+
+  <main class="page-shell">
+    <header class="hero">
+      <div><p class="eyebrow">PERFORMANCE OVERVIEW</p><h1>年度実績</h1><p>最新状況と、月次処理の進み具合をまとめて確認できます。</p></div>
+      <a class="detail-link" href="yearly-detail.html">項目別詳細 <span>›</span></a>
+      <button id="reload-button" class="reload-button" type="button" aria-label="最新情報に更新">↻</button>
+    </header>
+
+    <p id="yearly-loading" class="loading-message" aria-live="polite">データを読み込んでいます…</p>
+
+    <section class="latest-section">
+      <div class="section-heading"><div><p class="section-label">LATEST UPDATE</p><h2>全項目の最新情報</h2></div><p>最終入力された月を表示</p></div>
+      <div id="latest-grid" class="latest-grid"></div>
+    </section>
+
+    <section class="monthly-section">
+      <div class="monthly-head">
+        <div><p class="section-label">MONTHLY CHECK</p><h2>月次処理一覧</h2><p id="year-range" class="year-range">4月 — 3月</p></div>
+        <label><span class="sr-only">年度を選択</span><select id="fiscal-year-select" class="year-select"></select></label>
+      </div>
+      <div id="monthly-list" class="monthly-list"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインメニュー">
+    <a class="nav-item" href="home.html"><span>⌂</span><small>ホーム</small></a>
+    <a class="nav-item" href="index.html"><span>▣</span><small>日次業務</small></a>
+    <a class="nav-item" href="monthly.html"><span>▦</span><small>月次業務</small></a>
+    <a class="nav-item active" href="yearly.html" aria-current="page"><span>▤</span><small>年度実績</small></a>
+    <a class="nav-item" href="status.html"><span>◉</span><small>ステータス</small></a>
+    <a id="nav-edit-link" class="nav-item" href="edit.html"><span>✎</span><small>編集</small></a>
+  </nav>
+
+  <script src="config.js"></script><script src="https://accounts.google.com/gsi/client" async defer></script><script src="auth.js?v=5"></script><script src="yearly.js?v=9"></script>
+</body>
+</html>
