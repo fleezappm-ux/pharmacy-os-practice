@@ -245,12 +245,14 @@ function fetchWhoAmIShared() {
 }
 
 async function authFetch(action, extraBody) {
+  const startedAt = performance.now();
   const response = await fetch(PHARMACY_CONFIG.GAS_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ action, idToken: getIdToken(), ...(extraBody || {}) })
   });
   const result = await response.json();
+  recordPerf(action, performance.now() - startedAt);
 
   if (result.authError) {
     clearAuth();
@@ -331,3 +333,44 @@ function handleAuthErrorIfNeeded(result, retryCallback) {
   }
   return false;
 }
+
+
+/**
+ * 速度の計測用（普通は何も表示しません）。
+ * URLに ?perf=1 を付けて開くと、画面の右下に「GASの待ち時間」と「画面の読み込み時間」を表示します。
+ * 表示の有無はこのタブの中だけで覚えます。?perf=0 で消えます。
+ */
+const PERF_FLAG_KEY = "pharmacyOsPerf";
+const perfLog = [];
+(function initPerfFlag() {
+  try {
+    const q = new URLSearchParams(location.search).get("perf");
+    if (q === "1") sessionStorage.setItem(PERF_FLAG_KEY, "1");
+    if (q === "0") sessionStorage.removeItem(PERF_FLAG_KEY);
+  } catch (e) { /* 何もしない */ }
+})();
+
+function perfEnabled() {
+  try { return sessionStorage.getItem(PERF_FLAG_KEY) === "1"; } catch (e) { return false; }
+}
+
+function recordPerf(action, ms) {
+  if (!perfEnabled()) return;
+  perfLog.push(action + " " + Math.round(ms) + "ms");
+  renderPerf();
+}
+
+function renderPerf() {
+  if (!perfEnabled()) return;
+  let box = document.getElementById("perf-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "perf-box";
+    box.style.cssText = "position:fixed;right:4px;bottom:70px;z-index:99999;background:rgba(0,0,0,.8);color:#fff;font:11px/1.4 monospace;padding:6px 8px;border-radius:6px;max-width:60vw;pointer-events:none;white-space:pre-wrap";
+    document.body.appendChild(box);
+  }
+  const nav = performance.getEntriesByType("navigation")[0];
+  const head = nav ? "画面 DOM完了 " + Math.round(nav.domContentLoadedEventEnd) + "ms / 読込完了 " + Math.round(nav.loadEventEnd || 0) + "ms\n" : "";
+  box.textContent = head + perfLog.join("\n");
+}
+window.addEventListener("load", () => setTimeout(renderPerf, 0));
