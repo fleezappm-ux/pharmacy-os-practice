@@ -13,7 +13,7 @@
   <script src="config.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="auth.js?v=9"></script>
-  <script src="home.js?v=14" defer></script>
+  <script src="home.js?v=15" defer></script>
 </head>
 <body>
   <div id="auth-gate" class="auth-gate" hidden>
@@ -45,7 +45,7 @@
       </nav>
       <div class="side-pharmacy">
         <strong id="side-pharmacy-name">あおい薬局</strong>
-        <span>長野県松本市里山辺12090-2</span><span>TEL 0263-87-5203</span><span>FAX 0263-87-5204</span>
+        <span data-pharmacy="address">長野県松本市里山辺12090-2</span><span data-pharmacy="tel-label">TEL 0263-87-5203</span><span data-pharmacy="fax-label">FAX 0263-87-5204</span>
       </div>
     </aside>
 
@@ -56,7 +56,7 @@
       </header>
       <div class="desktop-topbar">
         <div class="search-shell"><span>⌕</span><p>必要な業務を左のメニューから選択</p></div>
-        <div class="account-chip"><span class="avatar">A</span><strong>あおい薬局</strong></div>
+        <div class="account-chip"><span class="avatar">A</span><strong data-pharmacy="name">あおい薬局</strong></div>
       </div>
 
       <main class="home-main">
@@ -92,7 +92,7 @@
 
           <aside class="dashboard-aside">
             <section class="panel task-panel" aria-labelledby="tasks-heading"><div class="section-heading"><div><p class="section-kicker">TASKS</p><h2 id="tasks-heading">今日やること</h2></div><span id="task-chip" class="status-chip">確認中</span></div><div id="task-list" class="task-list" aria-live="polite"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></section>
-                        <section class="pharmacy-card" aria-label="薬局情報"><p class="section-kicker">AOI PHARMACY</p><h2>あおい薬局</h2><p>長野県松本市里山辺12090-2</p><div><a href="tel:0263875203">TEL 0263-87-5203</a><span>FAX 0263-87-5204</span></div></section>
+                        <section class="pharmacy-card" aria-label="薬局情報"><p class="section-kicker">AOI PHARMACY</p><h2 data-pharmacy="name">あおい薬局</h2><p data-pharmacy="address">長野県松本市里山辺12090-2</p><div><a data-pharmacy="tel-link" href="tel:0263875203">TEL 0263-87-5203</a><span data-pharmacy="fax-label">FAX 0263-87-5204</span></div></section>
           </aside>
         </div>
         <p id="home-status" class="home-status" aria-live="polite"></p>

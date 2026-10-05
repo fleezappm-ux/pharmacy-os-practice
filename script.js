@@ -7,15 +7,14 @@
 
 const GAS_ENDPOINT = PHARMACY_CONFIG.GAS_URL;
 
-const DEFAULT_HOURS = {
-  0: "休局",
-  1: "08:45～18:00",
-  2: "08:45～18:00",
-  3: "08:45～18:00",
-  4: "08:30～16:30",
-  5: "08:45～18:00",
-  6: "08:30～13:00",
-};
+// 営業時間は config.js の OPENING_HOURS から作ります（無い場合は従来の値を使います）。
+const FALLBACK_OPENING_HOURS = { 0: null, 1: ["08:45", "18:00"], 2: ["08:45", "18:00"], 3: ["08:45", "18:00"], 4: ["08:30", "16:30"], 5: ["08:45", "18:00"], 6: ["08:30", "13:00"] };
+const OPENING_HOURS = PHARMACY_CONFIG.OPENING_HOURS || FALLBACK_OPENING_HOURS;
+const DEFAULT_HOURS = {};
+for (let d = 0; d < 7; d++) {
+  const h = OPENING_HOURS[d];
+  DEFAULT_HOURS[d] = h ? `${h[0]}～${h[1]}` : "休局";
+}
 
 const form = document.querySelector("#daily-form");
 const dateInput = document.querySelector("#date");

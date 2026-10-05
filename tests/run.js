@@ -48,6 +48,39 @@ test("config.js に必要な3項目がある", () => {
   assert(/\.apps\.googleusercontent\.com$/.test(sandbox.C.GOOGLE_CLIENT_ID), "GOOGLE_CLIENT_ID の形が違う");
 });
 
+test("config.js の営業時間は日〜土の7日分で、形が正しい", () => {
+  const sandbox = {};
+  vm.runInNewContext(read("config.js") + "\nthis.C = PHARMACY_CONFIG;", sandbox);
+  const h = sandbox.C.OPENING_HOURS;
+  assert(h, "OPENING_HOURS がない");
+  for (let d = 0; d < 7; d++) {
+    assert(d in h, d + " 日目がない");
+    if (h[d] !== null) {
+      assert(Array.isArray(h[d]) && h[d].length === 2, d + " の形が違う");
+      h[d].forEach((t) => assert(/^\d{2}:\d{2}$/.test(t), d + " の時刻の形が違う: " + t));
+      assert(h[d][0] < h[d][1], d + " の開始が終了より後");
+    }
+  }
+});
+
+test("営業時間: config.js に無い古い設定でも従来の時間で動く（本番の古いconfig.js対策）", () => {
+  const src = read("script.js");
+  const start = src.indexOf("const FALLBACK_OPENING_HOURS");
+  const end = src.indexOf("const form = ");
+  const sandbox = { PHARMACY_CONFIG: { GAS_URL: "x" } };
+  vm.runInNewContext(src.slice(start, end) + "\nthis.H = DEFAULT_HOURS;", sandbox);
+  assert(sandbox.H[1] === "08:45～18:00" && sandbox.H[4] === "08:30～16:30" && sandbox.H[0] === "休局", "既定値が違う: " + JSON.stringify(sandbox.H));
+});
+
+test("営業時間: config.js の値が反映される（日曜も営業にできる）", () => {
+  const src = read("script.js");
+  const start = src.indexOf("const FALLBACK_OPENING_HOURS");
+  const end = src.indexOf("const form = ");
+  const sandbox = { PHARMACY_CONFIG: { OPENING_HOURS: { 0: ["10:00", "12:00"], 1: null, 2: null, 3: null, 4: null, 5: null, 6: null } } };
+  vm.runInNewContext(src.slice(start, end) + "\nthis.H = DEFAULT_HOURS;", sandbox);
+  assert(sandbox.H[0] === "10:00～12:00" && sandbox.H[1] === "休局", JSON.stringify(sandbox.H));
+});
+
 queue.push({ name: null, fn: () => console.log("2. HTMLの読み込み") });
 const authVersions = new Set();
 htmlFiles.forEach((f) => {

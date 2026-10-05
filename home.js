@@ -7,18 +7,26 @@ document.addEventListener("DOMContentLoaded",()=>{
     const element=document.getElementById(id);
     if(element) element.textContent=PHARMACY_CONFIG.PHARMACY_NAME;
   });
+  // 住所・電話・FAXは config.js に値があるときだけ差し替えます（無ければHTMLの初期表示のまま）。
+  const fill=(key,fn)=>document.querySelectorAll(`[data-pharmacy="${key}"]`).forEach(fn);
+  fill("name",(el)=>{el.textContent=PHARMACY_CONFIG.PHARMACY_NAME;});
+  if(PHARMACY_CONFIG.PHARMACY_ADDRESS) fill("address",(el)=>{el.textContent=PHARMACY_CONFIG.PHARMACY_ADDRESS;});
+  if(PHARMACY_CONFIG.PHARMACY_TEL){
+    fill("tel-label",(el)=>{el.textContent=`TEL ${PHARMACY_CONFIG.PHARMACY_TEL}`;});
+    fill("tel-link",(el)=>{el.textContent=`TEL ${PHARMACY_CONFIG.PHARMACY_TEL}`;el.href=`tel:${PHARMACY_CONFIG.PHARMACY_TEL.replace(/[^0-9+]/g,"")}`;});
+  }
+  if(PHARMACY_CONFIG.PHARMACY_FAX) fill("fax-label",(el)=>{el.textContent=`FAX ${PHARMACY_CONFIG.PHARMACY_FAX}`;});
 });
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
-const DEFAULT_HOURS = {
-  0: "休局",
-  1: "8:45\n18:00",
-  2: "8:45\n18:00",
-  3: "8:45\n18:00",
-  4: "8:30\n16:30",
-  5: "8:45\n18:00",
-  6: "8:30\n13:00",
-};
+const FALLBACK_OPENING_HOURS = { 0: null, 1: ["08:45", "18:00"], 2: ["08:45", "18:00"], 3: ["08:45", "18:00"], 4: ["08:30", "16:30"], 5: ["08:45", "18:00"], 6: ["08:30", "13:00"] };
+const OPENING_HOURS = PHARMACY_CONFIG.OPENING_HOURS || FALLBACK_OPENING_HOURS;
+const DEFAULT_HOURS = {};
+for (let d = 0; d < 7; d++) {
+  const h = OPENING_HOURS[d];
+  // カレンダーには「8:45（改行）18:00」の形で出します。
+  DEFAULT_HOURS[d] = h ? `${h[0].replace(/^0/, "")}\n${h[1].replace(/^0/, "")}` : "休局";
+}
 
 const todayLabel = document.querySelector("#today-label");
 const weekCalendar = document.querySelector("#week-calendar");
