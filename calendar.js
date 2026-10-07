@@ -219,7 +219,10 @@ async function loadMonth() {
     console.error(e);
     calendarLoading.hidden = false;
     calendarLoading.classList.add("error");
-    calendarLoading.textContent = "読み込みに失敗しました。しばらくしてから再読み込みしてください。";
+    // 「設定が未完了です」は再読み込みでは直らないので、原因が分かる文にします。
+    calendarLoading.textContent = /未完了/.test(String(e && e.message))
+      ? "この薬局では、カレンダー機能がまだ設定されていません。管理者に連絡してください（導入手順書を参照）。"
+      : "読み込みに失敗しました。しばらくしてから再読み込みしてください。";
   }
 }
 
