@@ -92,7 +92,7 @@ profileForm.addEventListener("submit", async (event) => {
     if (data.success) {
       profileForm.hidden = true;
       setStatus(data.message || "登録が完了しました。", "success");
-      introText.textContent = "登録が完了しました。管理者が内容を確認するまで、閲覧のみの利用となります。下のリンクからPharmacy OSを開いてください。";
+      introText.textContent = "登録が完了しました。編集の権限は、管理者が設定するまでつきません（それまでは閲覧のみです）。下のリンクからPharmacy OSを開いてください。";
       const link = document.createElement("a");
       link.href = "home.html";
       link.textContent = "Pharmacy OSを開く";
